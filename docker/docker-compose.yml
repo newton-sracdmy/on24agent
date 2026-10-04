@@ -1,0 +1,83 @@
+services:
+  api:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile
+    container_name: gabster_api
+    restart: unless-stopped
+    ports:
+      - "8000:8000"
+    environment:
+      - ENVIRONMENT=production
+      - POSTGRES_SERVER=postgres
+      - REDIS_HOST=redis
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - gabster_network
+
+  worker:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile
+    container_name: gabster_worker
+    restart: unless-stopped
+    command: ["celery", "-A", "app.workers.celery_app", "worker", "--loglevel=INFO", "-Q", "ai,ingestion,campaigns,default"]
+    environment:
+      - ENVIRONMENT=production
+      - POSTGRES_SERVER=postgres
+      - REDIS_HOST=redis
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - gabster_network
+
+  postgres:
+    image: pgvector/pgvector:pg16
+    container_name: gabster_postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: gabster_ai
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: secure_postgres_password
+    ports:
+      - "5433:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d gabster_ai"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    networks:
+      - gabster_network
+
+  redis:
+    image: redis:7-alpine
+    container_name: gabster_redis
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    networks:
+      - gabster_network
+
+volumes:
+  postgres_data:
+  redis_data:
+
+networks:
+  gabster_network:
+    driver: bridge

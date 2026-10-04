@@ -1,0 +1,148 @@
+# ==============================================================================
+# Gabster AI — Production Git Ignore Configuration
+# ==============================================================================
+
+# ------------------------------------------------------------------------------
+# 1. Environment & Secrets (CRITICAL: Never commit sensitive credentials)
+# ------------------------------------------------------------------------------
+.env
+.env.test
+.env.local
+.env.*.local
+*.pem
+*.key
+*.cert
+*.crt
+*.pfx
+secrets/
+private_keys/
+
+# Allow example templates to be committed
+!.env.example
+!.env.test.example
+
+# ------------------------------------------------------------------------------
+# 2. Python Virtual Environments
+# ------------------------------------------------------------------------------
+.venv/
+venv/
+ENV/
+env/
+env.bak/
+venv.bak/
+.poetry/
+
+# ------------------------------------------------------------------------------
+# 3. Python Bytecode & Runtime Caches
+# ------------------------------------------------------------------------------
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+share/python-wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+MANIFEST
+
+# ------------------------------------------------------------------------------
+# 4. Testing, Coverage & Quality Assurance
+# ------------------------------------------------------------------------------
+.pytest_cache/
+.coverage
+.coverage.*
+coverage.xml
+htmlcov/
+.tox/
+.nox/
+.hypothesis/
+nosetests.xml
+coverage.xml
+*.cover
+*.py,cover
+
+# ------------------------------------------------------------------------------
+# 5. Type Checking & Linters
+# ------------------------------------------------------------------------------
+.mypy_cache/
+.ruff_cache/
+.pyre/
+.pytype/
+.dmypy.json
+dmypy.json
+
+# ------------------------------------------------------------------------------
+# 6. Media Storage, Uploads & Local Data
+# ------------------------------------------------------------------------------
+storage_uploads/
+uploads/
+media/
+data/
+downloads/
+temp/
+tmp/
+
+# ------------------------------------------------------------------------------
+# 7. Database & Persistence Artifacts
+# ------------------------------------------------------------------------------
+*.sqlite
+*.sqlite3
+*.db
+postgres_data/
+redis_data/
+dev_postgres_data/
+dev_redis_data/
+
+# ------------------------------------------------------------------------------
+# 8. Background Workers & Schedulers (Celery / Redis)
+# ------------------------------------------------------------------------------
+celerybeat-schedule
+celerybeat-schedule.*
+celerybeat.pid
+*.dump
+dump.rdb
+
+# ------------------------------------------------------------------------------
+# 9. Logs & Runtime Output
+# ------------------------------------------------------------------------------
+*.log
+logs/
+*.pid
+
+# ------------------------------------------------------------------------------
+# 10. IDEs & Code Editors
+# ------------------------------------------------------------------------------
+.idea/
+.vscode/*
+!.vscode/settings.json
+!.vscode/extensions.json
+!.vscode/launch.json
+*.swp
+*.swo
+*~
+*.sublime-project
+*.sublime-workspace
+
+# ------------------------------------------------------------------------------
+# 11. Operating System Generated Files
+# ------------------------------------------------------------------------------
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+desktop.ini
