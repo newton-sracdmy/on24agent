@@ -84,7 +84,7 @@ async def get_db_session() -> AsyncGenerator[AsyncSession, None]:
         if org_id:
             # Set the tenant context within the current local transaction
             await session.execute(
-                text("SET LOCAL app.current_org_id = :org_id"),
+                text("SELECT set_config('app.current_org_id', :org_id, true)"),
                 {"org_id": str(org_id)},
             )
         try:

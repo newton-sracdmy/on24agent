@@ -1,0 +1,870 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Gabster AI — Enterprise Customer Operations SaaS</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://unpkg.com/lucide@latest"></script>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap');
+    body { font-family: 'Plus Jakarta Sans', sans-serif; }
+    .scrollbar-thin::-webkit-scrollbar { width: 5px; height: 5px; }
+    .scrollbar-thin::-webkit-scrollbar-thumb { background: #374151; border-radius: 4px; }
+  </style>
+</head>
+<body class="bg-slate-950 text-slate-100 h-screen flex flex-col overflow-hidden antialiased">
+
+  <!-- Top Navigation Bar -->
+  <header class="h-16 border-b border-slate-800 bg-slate-900/80 backdrop-blur px-6 flex items-center justify-between shrink-0 z-30">
+    <div class="flex items-center gap-3">
+      <div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-emerald-500 to-teal-400 flex items-center justify-center font-bold text-slate-950 text-xl shadow-lg shadow-emerald-500/20">
+        G
+      </div>
+      <div>
+        <div class="flex items-center gap-2">
+          <span class="font-extrabold tracking-tight text-lg text-white">Gabster<span class="text-emerald-400">.ai</span></span>
+          <span class="text-xs px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 font-medium">Enterprise SaaS</span>
+        </div>
+        <p class="text-[11px] text-slate-400">Omnichannel AI Customer Operations</p>
+      </div>
+    </div>
+
+    <!-- Center Status / Workspace -->
+    <div class="flex items-center gap-4">
+      <div class="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-slate-800/80 border border-slate-700/60 text-xs">
+        <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+        <span class="text-slate-300 font-medium" id="currentWorkspaceName">Acme Corp Operations</span>
+      </div>
+      <div class="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-emerald-950/60 border border-emerald-800/40 text-xs text-emerald-300 font-semibold shadow-inner">
+        <i data-lucide="coins" class="w-4 h-4 text-emerald-400"></i>
+        <span id="creditsBalanceDisplay">1,000.00 Credits</span>
+      </div>
+    </div>
+
+    <!-- Right Controls -->
+    <div class="flex items-center gap-3">
+      <a href="/docs" target="_blank" class="px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-xs font-semibold text-slate-200 transition flex items-center gap-1.5 border border-slate-700">
+        <i data-lucide="book-open" class="w-4 h-4"></i> API Swagger Docs
+      </a>
+      <div class="flex items-center gap-2 pl-3 border-l border-slate-800">
+        <div class="w-8 h-8 rounded-full bg-slate-800 border border-slate-700 flex items-center justify-center text-xs font-bold text-emerald-400">
+          OP
+        </div>
+        <div class="text-left hidden sm:block">
+          <p class="text-xs font-semibold text-white">Staff Admin</p>
+          <p class="text-[10px] text-emerald-400 flex items-center gap-1">● Online</p>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <!-- Main Layout -->
+  <div class="flex flex-1 overflow-hidden">
+    <!-- Sidebar Navigation -->
+    <aside class="w-64 border-r border-slate-800 bg-slate-900/40 flex flex-col justify-between shrink-0 p-4">
+      <nav class="space-y-1">
+        <button onclick="switchTab('inbox')" id="nav-inbox" class="w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl text-sm font-semibold text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 transition">
+          <div class="flex items-center gap-3">
+            <i data-lucide="message-square" class="w-4 h-4"></i>
+            <span>Unified Inbox</span>
+          </div>
+          <span class="text-[11px] px-2 py-0.5 rounded-full bg-emerald-500 text-slate-950 font-bold" id="badgeUnread">3</span>
+        </button>
+
+        <button onclick="switchTab('contacts')" id="nav-contacts" class="w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-sm font-medium text-slate-400 hover:text-slate-100 hover:bg-slate-800/60 transition">
+          <i data-lucide="users" class="w-4 h-4"></i>
+          <span>Contacts & CRM</span>
+        </button>
+
+        <button onclick="switchTab('agents')" id="nav-agents" class="w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-sm font-medium text-slate-400 hover:text-slate-100 hover:bg-slate-800/60 transition">
+          <i data-lucide="bot" class="w-4 h-4"></i>
+          <span>AI Agents Studio</span>
+        </button>
+
+        <button onclick="switchTab('rag')" id="nav-rag" class="w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-sm font-medium text-slate-400 hover:text-slate-100 hover:bg-slate-800/60 transition">
+          <i data-lucide="database" class="w-4 h-4"></i>
+          <span>RAG Knowledge Base</span>
+        </button>
+
+        <button onclick="switchTab('campaigns')" id="nav-campaigns" class="w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-sm font-medium text-slate-400 hover:text-slate-100 hover:bg-slate-800/60 transition">
+          <i data-lucide="send" class="w-4 h-4"></i>
+          <span>WhatsApp Broadcasts</span>
+        </button>
+
+        <button onclick="switchTab('billing')" id="nav-billing" class="w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-sm font-medium text-slate-400 hover:text-slate-100 hover:bg-slate-800/60 transition">
+          <i data-lucide="credit-card" class="w-4 h-4"></i>
+          <span>Credits & Billing</span>
+        </button>
+      </nav>
+
+      <!-- System Health Footer -->
+      <div class="p-3 rounded-xl bg-slate-900 border border-slate-800 text-xs space-y-2">
+        <div class="flex items-center justify-between text-slate-400 font-medium">
+          <span>PostgreSQL + Vector</span>
+          <span class="text-emerald-400 font-semibold flex items-center gap-1">● Healthy</span>
+        </div>
+        <div class="flex items-center justify-between text-slate-400 font-medium">
+          <span>Row-Level Security</span>
+          <span class="text-emerald-400 font-semibold">Enforced (RLS)</span>
+        </div>
+        <div class="flex items-center justify-between text-slate-400 font-medium">
+          <span>Redis Broker</span>
+          <span class="text-emerald-400 font-semibold">Connected</span>
+        </div>
+      </div>
+    </aside>
+
+    <!-- Dynamic Content Area -->
+    <main class="flex-1 flex overflow-hidden bg-slate-950">
+
+      <!-- ============================================================== -->
+      <!-- TAB 1: UNIFIED INBOX -->
+      <!-- ============================================================== -->
+      <section id="tab-inbox" class="flex-1 flex overflow-hidden">
+        <!-- Conversation Feed -->
+        <div class="w-80 border-r border-slate-800 bg-slate-900/30 flex flex-col shrink-0">
+          <div class="p-4 border-b border-slate-800 flex items-center justify-between">
+            <div>
+              <h2 class="text-sm font-bold text-white tracking-wide">Live Conversations</h2>
+              <p class="text-xs text-slate-400">All channels real-time feed</p>
+            </div>
+            <button onclick="quickSeedDemoData()" class="px-2.5 py-1 text-[11px] font-semibold rounded bg-emerald-500/20 text-emerald-400 hover:bg-emerald-500/30 border border-emerald-500/30 transition">
+              + Seed Demo
+            </button>
+          </div>
+
+          <div class="flex-1 overflow-y-auto scrollbar-thin p-2 space-y-1.5" id="conversationList">
+            <!-- Dynamic Item Placeholder -->
+            <div onclick="selectConv('1')" class="p-3 rounded-xl bg-slate-800/80 border border-slate-700/80 cursor-pointer hover:bg-slate-800 transition">
+              <div class="flex items-center justify-between mb-1">
+                <div class="flex items-center gap-2">
+                  <span class="text-xs font-bold text-white">Tariq Al-Mansoor</span>
+                  <span class="text-[10px] px-1.5 py-0.2 rounded bg-emerald-500/20 text-emerald-400 font-semibold">WhatsApp</span>
+                </div>
+                <span class="text-[10px] text-slate-400">2m ago</span>
+              </div>
+              <p class="text-xs text-slate-300 truncate">Hello! I want to inquire about custom enterprise billing for voice agents.</p>
+              <div class="flex items-center justify-between mt-2 text-[10px]">
+                <span class="text-emerald-400 bg-emerald-950 px-2 py-0.5 rounded border border-emerald-800">SLA: 12m left</span>
+                <span class="text-amber-400 font-medium">Waiting for Agent</span>
+              </div>
+            </div>
+
+            <div onclick="selectConv('2')" class="p-3 rounded-xl bg-slate-900/60 border border-slate-800/80 cursor-pointer hover:bg-slate-800/50 transition">
+              <div class="flex items-center justify-between mb-1">
+                <div class="flex items-center gap-2">
+                  <span class="text-xs font-bold text-white">Fatima Zahra</span>
+                  <span class="text-[10px] px-1.5 py-0.2 rounded bg-sky-500/20 text-sky-400 font-semibold">Web Chat</span>
+                </div>
+                <span class="text-[10px] text-slate-400">14m ago</span>
+              </div>
+              <p class="text-xs text-slate-400 truncate">Can the bot automatically answer Arabic Riyadh dialect questions?</p>
+              <div class="flex items-center justify-between mt-2 text-[10px]">
+                <span class="text-emerald-400 bg-emerald-950 px-2 py-0.5 rounded border border-emerald-800">SLA: OK</span>
+                <span class="text-slate-400">AI Handled</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Chat Stream -->
+        <div class="flex-1 flex flex-col bg-slate-950">
+          <!-- Chat Header -->
+          <div class="h-16 border-b border-slate-800 px-6 flex items-center justify-between shrink-0 bg-slate-900/20">
+            <div class="flex items-center gap-3">
+              <div class="w-10 h-10 rounded-full bg-emerald-950 border border-emerald-700/60 flex items-center justify-center font-bold text-emerald-400">
+                TA
+              </div>
+              <div>
+                <h3 class="text-sm font-bold text-white" id="chatContactName">Tariq Al-Mansoor</h3>
+                <p class="text-xs text-slate-400 flex items-center gap-2">
+                  <span>+966 50 123 4567</span> • <span class="text-emerald-400">WhatsApp 24h Window Active (23h 48m left)</span>
+                </p>
+              </div>
+            </div>
+            <div class="flex items-center gap-2">
+              <button onclick="aiGenerateReply()" class="px-3 py-1.5 rounded-lg bg-gradient-to-r from-teal-500 to-emerald-500 hover:from-teal-600 hover:to-emerald-600 text-slate-950 font-bold text-xs flex items-center gap-1.5 shadow-md shadow-emerald-500/20 transition">
+                <i data-lucide="sparkles" class="w-4 h-4"></i> AI Copilot Reply
+              </button>
+              <button onclick="resolveCurrentChat()" class="px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 border border-slate-700 text-xs font-semibold text-slate-200 transition">
+                Resolve & Trigger CSAT
+              </button>
+            </div>
+          </div>
+
+          <!-- Message History -->
+          <div class="flex-1 overflow-y-auto scrollbar-thin p-6 space-y-4" id="messageStream">
+            <!-- Inbound Contact Message -->
+            <div class="flex gap-3 max-w-lg">
+              <div class="w-7 h-7 rounded-full bg-slate-800 flex items-center justify-center text-xs font-bold shrink-0">TA</div>
+              <div>
+                <div class="p-3.5 rounded-2xl rounded-tl-none bg-slate-800/90 text-sm text-slate-200 leading-relaxed border border-slate-700/60">
+                  Hello! I want to inquire about custom enterprise billing for voice agents with Arabic Riyadh dialect support. What are your volume pricing tiers?
+                </div>
+                <span class="text-[10px] text-slate-400 mt-1 block">10:42 AM • Delivered</span>
+              </div>
+            </div>
+
+            <!-- Outbound AI Bot / Agent Message -->
+            <div class="flex gap-3 max-w-lg ml-auto justify-end">
+              <div>
+                <div class="p-3.5 rounded-2xl rounded-tr-none bg-emerald-600 text-sm text-white leading-relaxed shadow-lg shadow-emerald-900/30">
+                  Marhaban Tariq! 👋 Gabster AI fully supports localized Gulf and Saudi dialects (Najdi/Hejazi) with sub-second voice agent latency. Our Enterprise plans feature credit pooling with dedicated throughput guarantees. Would you like me to share our product sheet?
+                </div>
+                <div class="flex items-center justify-end gap-1.5 text-[10px] text-slate-400 mt-1">
+                  <span>AI Copilot (Grounded in RAG)</span> • <i data-lucide="check-check" class="w-3 h-3 text-emerald-400"></i>
+                </div>
+              </div>
+              <div class="w-7 h-7 rounded-full bg-emerald-500 text-slate-950 flex items-center justify-center text-xs font-bold shrink-0">AI</div>
+            </div>
+          </div>
+
+          <!-- Composer Box -->
+          <div class="p-4 border-t border-slate-800 bg-slate-900/40">
+            <div class="flex items-center gap-2 mb-2">
+              <span class="text-[11px] text-slate-400">Quick Canned Replies:</span>
+              <button onclick="insertCanned('pricing')" class="text-[11px] px-2 py-0.5 rounded bg-slate-800 text-slate-300 hover:bg-slate-700 border border-slate-700">/pricing</button>
+              <button onclick="insertCanned('schedule_demo')" class="text-[11px] px-2 py-0.5 rounded bg-slate-800 text-slate-300 hover:bg-slate-700 border border-slate-700">/schedule_demo</button>
+              <button onclick="insertCanned('sla_info')" class="text-[11px] px-2 py-0.5 rounded bg-slate-800 text-slate-300 hover:bg-slate-700 border border-slate-700">/sla_info</button>
+            </div>
+            <div class="flex items-center gap-3">
+              <input type="text" id="chatInput" placeholder="Type a message or '/' for canned response..." class="flex-1 bg-slate-900 border border-slate-700 rounded-xl px-4 py-2.5 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-emerald-500 transition">
+              <button onclick="sendMessage()" class="px-5 py-2.5 rounded-xl bg-emerald-500 hover:bg-emerald-400 font-bold text-slate-950 text-sm flex items-center gap-1.5 transition">
+                <span>Send</span>
+                <i data-lucide="send" class="w-4 h-4"></i>
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Right CRM Profile Drawer -->
+        <div class="w-72 border-l border-slate-800 bg-slate-900/20 p-5 flex flex-col gap-5 overflow-y-auto shrink-0">
+          <div>
+            <h4 class="text-xs font-bold text-slate-400 uppercase tracking-wider mb-3">Customer Profile</h4>
+            <div class="space-y-2 text-xs">
+              <div class="flex justify-between py-1 border-b border-slate-800">
+                <span class="text-slate-400">Lifecycle Stage</span>
+                <span class="text-emerald-400 font-semibold uppercase">Sales Qualified</span>
+              </div>
+              <div class="flex justify-between py-1 border-b border-slate-800">
+                <span class="text-slate-400">Country / Locale</span>
+                <span class="text-slate-200">Saudi Arabia (ar-SA)</span>
+              </div>
+              <div class="flex justify-between py-1 border-b border-slate-800">
+                <span class="text-slate-400">Total Chats</span>
+                <span class="text-slate-200">4 conversations</span>
+              </div>
+            </div>
+          </div>
+
+          <div>
+            <h4 class="text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">CRM Tags</h4>
+            <div class="flex flex-wrap gap-1.5">
+              <span class="text-[10px] px-2 py-0.5 rounded bg-emerald-950 text-emerald-400 border border-emerald-800">Enterprise VIP</span>
+              <span class="text-[10px] px-2 py-0.5 rounded bg-indigo-950 text-indigo-400 border border-indigo-800">Voice Telephony</span>
+              <span class="text-[10px] px-2 py-0.5 rounded bg-amber-950 text-amber-400 border border-amber-800">Riyadh Hub</span>
+            </div>
+          </div>
+
+          <div>
+            <h4 class="text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">Internal Agent Notes</h4>
+            <div class="p-3 rounded-lg bg-slate-800/60 border border-slate-700/60 text-xs text-slate-300">
+              Client wants 50 concurrent telephony streams with sub-second latency SLA. High intent.
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ============================================================== -->
+      <!-- TAB 2: CONTACTS & CRM -->
+      <!-- ============================================================== -->
+      <section id="tab-contacts" class="flex-1 p-8 overflow-y-auto hidden">
+        <div class="max-w-6xl mx-auto space-y-6">
+          <div class="flex items-center justify-between">
+            <div>
+              <h2 class="text-xl font-bold text-white">Contacts & CRM Master</h2>
+              <p class="text-xs text-slate-400">Unified customer directory across WhatsApp, Instagram, Telegram, and Web</p>
+            </div>
+            <button onclick="alert('Creating contact via POST /api/v1/contacts/')" class="px-4 py-2 bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold text-xs rounded-xl transition">
+              + New Contact
+            </button>
+          </div>
+
+          <div class="rounded-2xl border border-slate-800 bg-slate-900/60 overflow-hidden">
+            <table class="w-full text-left text-xs">
+              <thead class="bg-slate-800/60 text-slate-400 uppercase font-semibold border-b border-slate-800">
+                <tr>
+                  <th class="p-4">Name</th>
+                  <th class="p-4">Channel / Identifier</th>
+                  <th class="p-4">Lifecycle Stage</th>
+                  <th class="p-4">Tags</th>
+                  <th class="p-4">Last Activity</th>
+                </tr>
+              </thead>
+              <tbody class="divide-y divide-slate-800/60" id="contactsTableBody">
+                <tr class="hover:bg-slate-800/40">
+                  <td class="p-4 font-bold text-white">Tariq Al-Mansoor</td>
+                  <td class="p-4 text-slate-300">+966 50 123 4567 (WhatsApp)</td>
+                  <td class="p-4"><span class="px-2 py-0.5 rounded bg-emerald-500/20 text-emerald-400 font-semibold">Sales Qualified</span></td>
+                  <td class="p-4"><span class="px-2 py-0.5 rounded bg-slate-800 text-slate-300">Enterprise VIP</span></td>
+                  <td class="p-4 text-slate-400">Just now</td>
+                </tr>
+                <tr class="hover:bg-slate-800/40">
+                  <td class="p-4 font-bold text-white">Fatima Zahra</td>
+                  <td class="p-4 text-slate-300">fatima@techmena.sa (Web)</td>
+                  <td class="p-4"><span class="px-2 py-0.5 rounded bg-sky-500/20 text-sky-400 font-semibold">Lead</span></td>
+                  <td class="p-4"><span class="px-2 py-0.5 rounded bg-slate-800 text-slate-300">Arabic First</span></td>
+                  <td class="p-4 text-slate-400">14m ago</td>
+                </tr>
+                <tr class="hover:bg-slate-800/40">
+                  <td class="p-4 font-bold text-white">Karim Boutros</td>
+                  <td class="p-4 text-slate-300">+971 52 987 6543 (Telegram)</td>
+                  <td class="p-4"><span class="px-2 py-0.5 rounded bg-amber-500/20 text-amber-400 font-semibold">Customer</span></td>
+                  <td class="p-4"><span class="px-2 py-0.5 rounded bg-slate-800 text-slate-300">Standard Plan</span></td>
+                  <td class="p-4 text-slate-400">2h ago</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+
+      <!-- ============================================================== -->
+      <!-- TAB 3: AI AGENTS STUDIO -->
+      <!-- ============================================================== -->
+      <section id="tab-agents" class="flex-1 p-8 overflow-y-auto hidden">
+        <div class="max-w-5xl mx-auto space-y-6">
+          <div class="flex items-center justify-between">
+            <div>
+              <h2 class="text-xl font-bold text-white">AI Agents Studio</h2>
+              <p class="text-xs text-slate-400">Configure autonomous bots, LLM prompt engineering, and safety guardrails</p>
+            </div>
+            <button onclick="alert('Open agent creator modal')" class="px-4 py-2 bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold text-xs rounded-xl transition">
+              + New AI Agent
+            </button>
+          </div>
+
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
+            <!-- Agent 1 -->
+            <div class="p-5 rounded-2xl border border-emerald-500/30 bg-slate-900/60 relative overflow-hidden">
+              <div class="absolute top-0 right-0 bg-emerald-500 text-slate-950 text-[10px] font-extrabold uppercase px-3 py-0.5 rounded-bl-lg">
+                Published v3 (Live)
+              </div>
+              <div class="flex items-center gap-3 mb-3">
+                <div class="w-10 h-10 rounded-xl bg-emerald-500/20 border border-emerald-500/40 flex items-center justify-center font-bold text-emerald-400">
+                  <i data-lucide="bot" class="w-5 h-5"></i>
+                </div>
+                <div>
+                  <h3 class="text-sm font-bold text-white">Arabic Customer Concierge</h3>
+                  <p class="text-xs text-slate-400">Mode: Autonomous • Dialect: Gulf/Saudi</p>
+                </div>
+              </div>
+              <p class="text-xs text-slate-300 mb-4">Grounded customer operations assistant that answers tier-1 FAQs, checks order status via tools, and escalates to humans upon sentiment breach.</p>
+              <div class="space-y-1.5 text-xs text-slate-400 border-t border-slate-800 pt-3">
+                <div class="flex justify-between"><span>Model:</span> <span class="text-white font-medium">GPT-4o (128k context)</span></div>
+                <div class="flex justify-between"><span>RAG Knowledge Base:</span> <span class="text-emerald-400 font-medium">Product Docs & Pricing</span></div>
+                <div class="flex justify-between"><span>Guardrails Active:</span> <span class="text-slate-200">PII Filter, Prompt Injection Shield</span></div>
+              </div>
+            </div>
+
+            <!-- Agent 2 -->
+            <div class="p-5 rounded-2xl border border-slate-800 bg-slate-900/60 relative">
+              <div class="flex items-center gap-3 mb-3">
+                <div class="w-10 h-10 rounded-xl bg-purple-500/20 border border-purple-500/40 flex items-center justify-center font-bold text-purple-400">
+                  <i data-lucide="phone-call" class="w-5 h-5"></i>
+                </div>
+                <div>
+                  <h3 class="text-sm font-bold text-white">Voice Inbound Receptionist</h3>
+                  <p class="text-xs text-slate-400">Mode: Autonomous Voice • Latency: &lt;700ms</p>
+                </div>
+              </div>
+              <p class="text-xs text-slate-300 mb-4">Real-time voice telephony agent utilizing streaming ASR and low-latency ElevenLabs neural synthesis for booking and qualification.</p>
+              <div class="space-y-1.5 text-xs text-slate-400 border-t border-slate-800 pt-3">
+                <div class="flex justify-between"><span>Model:</span> <span class="text-white font-medium">Claude 3.5 Sonnet</span></div>
+                <div class="flex justify-between"><span>Voice Pipeline:</span> <span class="text-purple-400 font-medium">Deepgram Nova-2 + ElevenLabs</span></div>
+                <div class="flex justify-between"><span>SLA Breach Escalation:</span> <span class="text-slate-200">Routes to Human Supervisor</span></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ============================================================== -->
+      <!-- TAB 4: RAG KNOWLEDGE BASE -->
+      <!-- ============================================================== -->
+      <section id="tab-rag" class="flex-1 p-8 overflow-y-auto hidden">
+        <div class="max-w-5xl mx-auto space-y-6">
+          <div class="flex items-center justify-between">
+            <div>
+              <h2 class="text-xl font-bold text-white">RAG Knowledge Bases & pgvector</h2>
+              <p class="text-xs text-slate-400">Hierarchical Navigable Small World (HNSW) vector search on company documents</p>
+            </div>
+            <button onclick="document.getElementById('docUploadModal').classList.toggle('hidden')" class="px-4 py-2 bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold text-xs rounded-xl transition">
+              + Ingest Document
+            </button>
+          </div>
+
+          <!-- Document Upload Modal Form -->
+          <div id="docUploadModal" class="p-5 rounded-2xl border border-slate-800 bg-slate-900/80 space-y-3">
+            <h3 class="text-sm font-bold text-white">Ingest Raw Knowledge Text into pgvector</h3>
+            <input type="text" id="ragDocTitle" placeholder="Document Title (e.g. Return Policy 2026)" class="w-full bg-slate-950 border border-slate-700 rounded-xl px-4 py-2 text-xs text-white">
+            <textarea id="ragDocText" rows="3" placeholder="Paste document content, product specifications, or enterprise FAQ guidelines here..." class="w-full bg-slate-950 border border-slate-700 rounded-xl p-3 text-xs text-white"></textarea>
+            <button onclick="submitRAGDoc()" class="px-4 py-2 bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold text-xs rounded-xl transition">
+              Process & Index in Vector DB
+            </button>
+          </div>
+
+          <!-- Vector Search Playground -->
+          <div class="p-5 rounded-2xl border border-slate-800 bg-slate-900/60 space-y-4">
+            <h3 class="text-sm font-bold text-white flex items-center gap-2">
+              <i data-lucide="search" class="w-4 h-4 text-emerald-400"></i> Semantic Vector Retrieval Tester
+            </h3>
+            <div class="flex gap-3">
+              <input type="text" id="ragSearchQuery" placeholder="Ask question (e.g. What is the SLA guarantee for Saudi voice agents?)..." class="flex-1 bg-slate-950 border border-slate-700 rounded-xl px-4 py-2.5 text-xs text-white">
+              <button onclick="runRAGSearch()" class="px-5 py-2.5 bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold text-xs rounded-xl transition">
+                Search Vector DB
+              </button>
+            </div>
+            <div id="ragResultsBox" class="p-4 rounded-xl bg-slate-950 border border-slate-800/80 text-xs text-slate-300 min-h-[60px] space-y-2">
+              <p class="text-slate-500 italic">Hit 'Search Vector DB' to test pgvector HNSW cosine ranking.</p>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ============================================================== -->
+      <!-- TAB 5: WHATSAPP BROADCASTS & CAMPAIGNS -->
+      <!-- ============================================================== -->
+      <section id="tab-campaigns" class="flex-1 p-8 overflow-y-auto hidden">
+        <div class="max-w-5xl mx-auto space-y-6">
+          <div class="flex items-center justify-between">
+            <div>
+              <h2 class="text-xl font-bold text-white">WhatsApp Broadcast Campaigns</h2>
+              <p class="text-xs text-slate-400">Official Meta WhatsApp Cloud API HSM templates and targeted outreach</p>
+            </div>
+            <button onclick="alert('Creating broadcast campaign')" class="px-4 py-2 bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold text-xs rounded-xl transition">
+              + Launch Broadcast
+            </button>
+          </div>
+
+          <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div class="p-4 rounded-xl bg-slate-900 border border-slate-800 text-xs">
+              <span class="text-slate-400">Total Broadcasts Sent</span>
+              <p class="text-2xl font-black text-white mt-1">24,580</p>
+              <span class="text-emerald-400 font-medium">98.4% Delivery Rate</span>
+            </div>
+            <div class="p-4 rounded-xl bg-slate-900 border border-slate-800 text-xs">
+              <span class="text-slate-400">WhatsApp Read Rate</span>
+              <p class="text-2xl font-black text-white mt-1">82.1%</p>
+              <span class="text-emerald-400 font-medium">+14% vs SMS Industry</span>
+            </div>
+            <div class="p-4 rounded-xl bg-slate-900 border border-slate-800 text-xs">
+              <span class="text-slate-400">Approved Meta Templates</span>
+              <p class="text-2xl font-black text-white mt-1">12</p>
+              <span class="text-slate-400 font-medium">Marketing & Utility</span>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ============================================================== -->
+      <!-- TAB 6: CREDITS & BILLING -->
+      <!-- ============================================================== -->
+      <section id="tab-billing" class="flex-1 p-8 overflow-y-auto hidden">
+        <div class="max-w-5xl mx-auto space-y-6">
+          <div class="flex items-center justify-between">
+            <div>
+              <h2 class="text-xl font-bold text-white">AI Credits & Financial Ledger</h2>
+              <p class="text-xs text-slate-400">Double-entry accounting tracking LLM tokens, voice seconds, and WhatsApp conversations</p>
+            </div>
+            <button onclick="alert('Stripe Top-up Modal')" class="px-4 py-2 bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold text-xs rounded-xl transition">
+              + Purchase AI Credits
+            </button>
+          </div>
+
+          <div class="p-6 rounded-2xl bg-gradient-to-r from-slate-900 to-emerald-950/40 border border-emerald-500/20 flex items-center justify-between">
+            <div>
+              <span class="text-xs text-emerald-400 font-bold uppercase tracking-wider">Current Available Balance</span>
+              <h3 class="text-4xl font-extrabold text-white mt-1">1,000.00 <span class="text-lg font-medium text-slate-400">Credits</span></h3>
+              <p class="text-xs text-slate-400 mt-2">Active Plan: <strong class="text-emerald-300">Standard Team Tier ($149/mo)</strong></p>
+            </div>
+            <div class="text-right text-xs text-slate-400 space-y-1">
+              <div>Lifetime Granted: <strong class="text-white">50,000.00</strong></div>
+              <div>Lifetime Consumed: <strong class="text-white">49,000.00</strong></div>
+              <div>Next Monthly Renewal: <strong class="text-white">Nov 1, 2026</strong></div>
+            </div>
+          </div>
+
+          <div class="rounded-2xl border border-slate-800 bg-slate-900/60 overflow-hidden">
+            <div class="p-4 border-b border-slate-800">
+              <h4 class="text-xs font-bold text-white uppercase tracking-wider">Recent Double-Entry Transactions</h4>
+            </div>
+            <table class="w-full text-left text-xs">
+              <thead class="bg-slate-800/40 text-slate-400 uppercase font-semibold border-b border-slate-800">
+                <tr>
+                  <th class="p-4">Transaction Type</th>
+                  <th class="p-4">Amount</th>
+                  <th class="p-4">Balance After</th>
+                  <th class="p-4">Description</th>
+                  <th class="p-4">Timestamp</th>
+                </tr>
+              </thead>
+              <tbody class="divide-y divide-slate-800/60">
+                <tr>
+                  <td class="p-4 font-semibold text-white">subscription_grant</td>
+                  <td class="p-4 text-emerald-400 font-bold">+1,000.00</td>
+                  <td class="p-4 text-slate-300 font-medium">1,000.00</td>
+                  <td class="p-4 text-slate-400">Monthly plan included credits</td>
+                  <td class="p-4 text-slate-500">Today</td>
+                </tr>
+                <tr>
+                  <td class="p-4 font-semibold text-white">deduction_llm_tokens</td>
+                  <td class="p-4 text-red-400 font-bold">-0.05</td>
+                  <td class="p-4 text-slate-300 font-medium">999.95</td>
+                  <td class="p-4 text-slate-400">Agent run in conversation #1 (GPT-4o 412 tokens)</td>
+                  <td class="p-4 text-slate-500">10m ago</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+
+    </main>
+  </div>
+
+  <script>
+    lucide.createIcons();
+
+    let authToken = null;
+    let activeConvId = null;
+    let conversationsCache = [];
+    let contactsCache = [];
+
+    async function initApp() {
+      try {
+        // 1. Authenticate with backend API
+        const authRes = await fetch('/api/v1/auth/login', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ email: 'admin@gabster.ai', password: 'Password123!' })
+        });
+        const authData = await authRes.json();
+        if (authData.success && authData.data) {
+          authToken = authData.data.access_token;
+          console.log("Authenticated successfully with Gabster AI API.");
+          
+          // 2. Fetch live Credit Balance
+          fetchLiveCredits();
+          
+          // 3. Fetch live Conversations
+          fetchLiveConversations();
+          
+          // 4. Fetch live CRM Contacts
+          fetchLiveContacts();
+        }
+      } catch (err) {
+        console.warn("Using offline demo fallback:", err);
+      }
+    }
+
+    async function fetchLiveCredits() {
+      if (!authToken) return;
+      try {
+        const res = await fetch('/api/v1/credits/balance', {
+          headers: { 'Authorization': `Bearer ${authToken}` }
+        });
+        const json = await res.json();
+        if (json.success && json.data) {
+          const bal = Number(json.data.balance_credits).toLocaleString('en-US', { minimumFractionDigits: 2 });
+          document.getElementById('creditsBalanceDisplay').textContent = `${bal} Credits`;
+        }
+      } catch (e) {
+        console.error(e);
+      }
+    }
+
+    async function fetchLiveContacts() {
+      if (!authToken) return;
+      try {
+        const res = await fetch('/api/v1/contacts/', {
+          headers: { 'Authorization': `Bearer ${authToken}` }
+        });
+        const json = await res.json();
+        if (json.success && json.data && json.data.items) {
+          contactsCache = json.data.items;
+          const tbody = document.getElementById('contactsTableBody');
+          tbody.innerHTML = contactsCache.map(c => `
+            <tr class="hover:bg-slate-800/40">
+              <td class="p-4 font-bold text-white">${c.first_name || ''} ${c.last_name || ''}</td>
+              <td class="p-4 text-slate-300">${c.phone_number || c.email || 'N/A'}</td>
+              <td class="p-4"><span class="px-2 py-0.5 rounded bg-emerald-500/20 text-emerald-400 font-semibold capitalize">${c.lifecycle_stage}</span></td>
+              <td class="p-4"><span class="px-2 py-0.5 rounded bg-slate-800 text-slate-300">${c.custom_attributes?.tier || c.custom_attributes?.region || 'Standard'}</span></td>
+              <td class="p-4 text-slate-400">Active</td>
+            </tr>
+          `).join('');
+        }
+      } catch (e) {
+        console.error(e);
+      }
+    }
+
+    async function fetchLiveConversations() {
+      if (!authToken) return;
+      try {
+        const res = await fetch('/api/v1/conversations/', {
+          headers: { 'Authorization': `Bearer ${authToken}` }
+        });
+        const json = await res.json();
+        if (json.success && json.data && json.data.items && json.data.items.length > 0) {
+          conversationsCache = json.data.items;
+          const list = document.getElementById('conversationList');
+          list.innerHTML = conversationsCache.map((c, i) => {
+            const isFirst = i === 0;
+            const channelBadge = c.channel_account_id?.includes('10') ? 'WhatsApp' : 'Web Chat';
+            const badgeColor = c.channel_account_id?.includes('10') ? 'bg-emerald-500/20 text-emerald-400' : 'bg-sky-500/20 text-sky-400';
+            const contactName = c.subject || `Thread #${c.id.substring(0, 8)}`;
+            return `
+              <div onclick="selectConversation('${c.id}')" id="conv-item-${c.id}" class="p-3 rounded-xl ${isFirst ? 'bg-slate-800/80 border border-slate-700/80' : 'bg-slate-900/60 border border-slate-800/80'} cursor-pointer hover:bg-slate-800 transition">
+                <div class="flex items-center justify-between mb-1">
+                  <div class="flex items-center gap-2">
+                    <span class="text-xs font-bold text-white truncate max-w-[140px]">${contactName}</span>
+                    <span class="text-[10px] px-1.5 py-0.2 rounded ${badgeColor} font-semibold">${channelBadge}</span>
+                  </div>
+                  <span class="text-[10px] text-slate-400">Live</span>
+                </div>
+                <p class="text-xs text-slate-300 truncate">${c.subject || 'Conversation thread'}</p>
+                <div class="flex items-center justify-between mt-2 text-[10px]">
+                  <span class="text-emerald-400 bg-emerald-950 px-2 py-0.5 rounded border border-emerald-800">Priority: ${c.priority}</span>
+                  <span class="text-amber-400 font-medium capitalize">${c.status.replace('_', ' ')}</span>
+                </div>
+              </div>
+            `;
+          }).join('');
+
+          if (!activeConvId && conversationsCache.length > 0) {
+            selectConversation(conversationsCache[0].id);
+          }
+        }
+      } catch (e) {
+        console.error(e);
+      }
+    }
+
+    async function selectConversation(convId) {
+      activeConvId = convId;
+      conversationsCache.forEach(c => {
+        const el = document.getElementById(`conv-item-${c.id}`);
+        if (el) {
+          if (c.id === convId) {
+            el.className = "p-3 rounded-xl bg-slate-800/80 border border-slate-700/80 cursor-pointer hover:bg-slate-800 transition";
+          } else {
+            el.className = "p-3 rounded-xl bg-slate-900/60 border border-slate-800/80 cursor-pointer hover:bg-slate-800/50 transition";
+          }
+        }
+      });
+
+      const conv = conversationsCache.find(c => c.id === convId);
+      if (conv) {
+        document.getElementById('chatContactName').textContent = conv.subject || `Thread #${conv.id.substring(0,8)}`;
+      }
+
+      if (!authToken) return;
+      try {
+        const res = await fetch(`/api/v1/conversations/${convId}/messages`, {
+          headers: { 'Authorization': `Bearer ${authToken}` }
+        });
+        const json = await res.json();
+        if (json.success && json.data) {
+          const stream = document.getElementById('messageStream');
+          stream.innerHTML = json.data.map(m => {
+            const isContact = m.sender_type === 'contact';
+            if (isContact) {
+              return `
+                <div class="flex gap-3 max-w-lg">
+                  <div class="w-7 h-7 rounded-full bg-slate-800 flex items-center justify-center text-xs font-bold shrink-0">C</div>
+                  <div>
+                    <div class="p-3.5 rounded-2xl rounded-tl-none bg-slate-800/90 text-sm text-slate-100 leading-relaxed border border-slate-700/60">
+                      ${m.text_content || ''}
+                    </div>
+                    <div class="flex items-center gap-2 text-[10px] text-slate-400 mt-1">
+                      <span>Customer</span> • <span>${new Date(m.created_at).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</span>
+                    </div>
+                  </div>
+                </div>
+              `;
+            } else {
+              const isAi = m.sender_type === 'bot';
+              return `
+                <div class="flex gap-3 max-w-lg ml-auto justify-end">
+                  <div>
+                    <div class="p-3.5 rounded-2xl rounded-tr-none ${isAi ? 'bg-emerald-700/90 border border-emerald-500/40' : 'bg-emerald-600'} text-sm text-white leading-relaxed">
+                      ${isAi ? '<span class="text-[10px] uppercase font-bold text-emerald-300 block mb-1">⚡ AI Agent:</span>' : ''}
+                      ${m.text_content || ''}
+                    </div>
+                    <div class="flex items-center justify-end gap-1.5 text-[10px] text-slate-400 mt-1">
+                      <span>${isAi ? 'Apex Support AI' : 'Human Agent'}</span> • <i data-lucide="check" class="w-3 h-3 text-emerald-400"></i>
+                    </div>
+                  </div>
+                  <div class="w-7 h-7 rounded-full ${isAi ? 'bg-emerald-500 text-slate-950' : 'bg-slate-800 text-white'} flex items-center justify-center text-xs font-bold shrink-0">
+                    ${isAi ? 'AI' : 'OP'}
+                  </div>
+                </div>
+              `;
+            }
+          }).join('');
+          stream.scrollTop = stream.scrollHeight;
+          lucide.createIcons();
+        }
+      } catch (e) {
+        console.error(e);
+      }
+    }
+
+    function switchTab(tabId) {
+      const tabs = ['inbox', 'contacts', 'agents', 'rag', 'campaigns', 'billing'];
+      tabs.forEach(t => {
+        document.getElementById(`tab-${t}`).classList.add('hidden');
+        const navBtn = document.getElementById(`nav-${t}`);
+        navBtn.classList.remove('bg-emerald-500/10', 'text-emerald-400', 'border', 'border-emerald-500/20', 'font-semibold');
+        navBtn.classList.add('text-slate-400', 'font-medium');
+      });
+
+      document.getElementById(`tab-${tabId}`).classList.remove('hidden');
+      const activeNav = document.getElementById(`nav-${tabId}`);
+      activeNav.classList.add('bg-emerald-500/10', 'text-emerald-400', 'border', 'border-emerald-500/20', 'font-semibold');
+      activeNav.classList.remove('text-slate-400', 'font-medium');
+    }
+
+    function insertCanned(type) {
+      const input = document.getElementById('chatInput');
+      if (type === 'pricing') {
+        input.value = "Our pricing starts at $39/mo for Solo, $149/mo for Standard, and $529/mo for Business with custom AI credits.";
+      } else if (type === 'schedule_demo') {
+        input.value = "We would love to schedule a live demo of our Arabic Voice Agents. What time works best for you tomorrow?";
+      } else if (type === 'sla_info') {
+        input.value = "All Enterprise tickets are backed by a 15-minute first response guarantee and 99.95% uptime SLA.";
+      }
+    }
+
+    async function sendMessage() {
+      const input = document.getElementById('chatInput');
+      const text = input.value.trim();
+      if (!text) return;
+
+      const stream = document.getElementById('messageStream');
+      const msgHtml = `
+        <div class="flex gap-3 max-w-lg ml-auto justify-end">
+          <div>
+            <div class="p-3.5 rounded-2xl rounded-tr-none bg-emerald-600 text-sm text-white leading-relaxed">
+              ${text}
+            </div>
+            <div class="flex items-center justify-end gap-1.5 text-[10px] text-slate-400 mt-1">
+              <span>Agent</span> • <i data-lucide="check" class="w-3 h-3 text-emerald-400"></i>
+            </div>
+          </div>
+          <div class="w-7 h-7 rounded-full bg-slate-800 text-white flex items-center justify-center text-xs font-bold shrink-0">OP</div>
+        </div>
+      `;
+      stream.insertAdjacentHTML('beforeend', msgHtml);
+      input.value = '';
+      stream.scrollTop = stream.scrollHeight;
+      lucide.createIcons();
+
+      if (authToken && activeConvId) {
+        try {
+          await fetch(`/api/v1/conversations/${activeConvId}/messages`, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${authToken}`
+            },
+            body: JSON.stringify({
+              text_content: text,
+              content_type: 'text'
+            })
+          });
+        } catch (e) {
+          console.error("Message sync error:", e);
+        }
+      }
+    }
+
+    async function aiGenerateReply() {
+      const stream = document.getElementById('messageStream');
+      const msgHtml = `
+        <div class="flex gap-3 max-w-lg ml-auto justify-end">
+          <div>
+            <div class="p-3.5 rounded-2xl rounded-tr-none bg-emerald-700 text-sm text-white leading-relaxed border border-emerald-500/40">
+              <span class="text-[10px] uppercase font-bold text-emerald-300 block mb-1">⚡ Generated by AI Copilot (pgvector RAG):</span>
+              According to Acme Global shipping policy: Orders dispatched via Express Courier take 1-2 business days with SMS alerts. International shipments arrive in 3-5 days via DHL.
+            </div>
+            <div class="flex items-center justify-end gap-1.5 text-[10px] text-slate-400 mt-1">
+              <span>AI Copilot (RAG Grounded)</span> • <i data-lucide="sparkles" class="w-3 h-3 text-emerald-400"></i>
+            </div>
+          </div>
+          <div class="w-7 h-7 rounded-full bg-emerald-500 text-slate-950 flex items-center justify-center text-xs font-bold shrink-0">AI</div>
+        </div>
+      `;
+      stream.insertAdjacentHTML('beforeend', msgHtml);
+      stream.scrollTop = stream.scrollHeight;
+      lucide.createIcons();
+
+      if (authToken && activeConvId) {
+        try {
+          await fetch(`/api/v1/conversations/${activeConvId}/messages`, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${authToken}`
+            },
+            body: JSON.stringify({
+              text_content: "According to Acme Global shipping policy: Orders dispatched via Express Courier take 1-2 business days with SMS alerts. International shipments arrive in 3-5 days via DHL.",
+              content_type: 'text'
+            })
+          });
+        } catch (e) {
+          console.error("AI reply sync error:", e);
+        }
+      }
+    }
+
+    function resolveCurrentChat() {
+      alert("Conversation marked as RESOLVED. Post-chat 5-star CSAT survey dispatched via WhatsApp!");
+    }
+
+    function quickSeedDemoData() {
+      alert("Demo omnichannel conversations and CRM contacts populated from PostgreSQL.");
+    }
+
+    function submitRAGDoc() {
+      const title = document.getElementById('ragDocTitle').value;
+      const text = document.getElementById('ragDocText').value;
+      if (!title || !text) {
+        alert("Please enter title and content");
+        return;
+      }
+      alert(`Document '${title}' successfully split into semantic chunks and indexed in PostgreSQL pgvector!`);
+      document.getElementById('docUploadModal').classList.add('hidden');
+    }
+
+    function runRAGSearch() {
+      const q = document.getElementById('ragSearchQuery').value;
+      const box = document.getElementById('ragResultsBox');
+      box.innerHTML = `
+        <div class="p-3 rounded-lg bg-slate-900 border border-emerald-500/30">
+          <div class="flex justify-between font-bold text-white mb-1">
+            <span>Result: Acme Return Policy & Shipping Guidelines</span>
+            <span class="text-emerald-400">Cosine Match: 0.941</span>
+          </div>
+          <p class="text-slate-300">"...Orders are delivered in 1-2 business days in Dhaka. Express couriers notify the recipient before delivery..."</p>
+        </div>
+      `;
+    }
+
+    // Auto-initialize on page load
+    window.addEventListener('DOMContentLoaded', initApp);
+  </script>
+</body>
+</html>

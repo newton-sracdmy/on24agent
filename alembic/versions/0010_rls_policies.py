@@ -10,7 +10,7 @@ from typing import Sequence, Union
 from alembic import op
 
 revision: str = "0010_rls_policies"
-down_revision: Union[str, None] = "0009_audit_security_and_outbox_schema"
+down_revision: Union[str, None] = "0009_audit_outbox"
 branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
 

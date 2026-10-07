@@ -8,7 +8,7 @@ Create Date: 2026-10-04 01:31:00.000000
 from typing import Sequence, Union
 from alembic import op
 
-revision: str = "0011_indexes_and_performance"
+revision: str = "0011_indexes_perf"
 down_revision: Union[str, None] = "0010_rls_policies"
 branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None

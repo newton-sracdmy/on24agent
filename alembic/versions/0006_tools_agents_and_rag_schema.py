@@ -11,8 +11,8 @@ import sqlalchemy as sa
 from sqlalchemy.dialects import postgresql
 from pgvector.sqlalchemy import Vector
 
-revision: str = "0006_tools_agents_and_rag_schema"
-down_revision: Union[str, None] = "0005_inbox_and_conversations_schema"
+revision: str = "0006_agents_rag"
+down_revision: Union[str, None] = "0005_inbox_conv"
 branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
 

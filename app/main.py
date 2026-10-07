@@ -3,14 +3,18 @@
 Initializes routers, middlewares, exception handlers, and OpenTelemetry instrumentation.
 """
 
+from pathlib import Path
 from contextlib import asynccontextmanager
 from typing import AsyncGenerator
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.middleware.gzip import GZipMiddleware
+from fastapi.responses import FileResponse
+from fastapi.staticfiles import StaticFiles
 from prometheus_fastapi_instrumentator import Instrumentator
 
+import app.common.all_models  # noqa: F401 - Register all SQLAlchemy domain mappers
 from app.api.v1.router import api_v1_router
 from app.api.webhooks.router import webhooks_router
 from app.common.schemas import APIResponse
@@ -48,6 +52,7 @@ def create_application() -> FastAPI:
         redoc_url="/redoc" if settings.ENVIRONMENT != "production" else None,
         openapi_url=f"{settings.API_V1_STR}/openapi.json",
         lifespan=lifespan,
+        debug=settings.DEBUG,
     )
 
     # Core Middlewares (Executed in reverse order of addition)
@@ -87,6 +92,16 @@ def create_application() -> FastAPI:
     # Include Versioned API Routes & Webhook Ingress
     app.include_router(api_v1_router, prefix=settings.API_V1_STR)
     app.include_router(webhooks_router, prefix="/webhooks")
+
+    # Serve Static Assets and Dashboard Frontend
+    static_dir = Path(__file__).resolve().parent / "static"
+    if static_dir.exists():
+        app.mount("/static", StaticFiles(directory=str(static_dir)), name="static")
+
+        @app.get("/", include_in_schema=False)
+        async def serve_dashboard() -> FileResponse:
+            index_file = static_dir / "index.html"
+            return FileResponse(str(index_file))
 
     # Prometheus Instrumentation
     if settings.ENABLE_METRICS:

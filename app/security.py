@@ -14,19 +14,12 @@ from datetime import datetime, timedelta, timezone
 from typing import Any, Dict, Optional, Tuple
 from uuid import UUID
 
+import bcrypt
 from cryptography.fernet import Fernet
 from jose import JWTError, jwt
-from passlib.context import CryptContext
 
 from app.config import settings
 from app.exceptions import AuthenticationError
-
-# Password hashing context using Bcrypt
-pwd_context = CryptContext(
-    schemes=["bcrypt"],
-    deprecated="auto",
-    bcrypt__rounds=settings.BCRYPT_ROUNDS,
-)
 
 # Symmetric encryption cipher for sensitive keys at rest
 _cipher: Optional[Fernet] = None
@@ -47,12 +40,19 @@ def get_cipher() -> Fernet:
 
 def verify_password(plain_password: str, hashed_password: str) -> bool:
     """Verify a raw password against its bcrypt hash (truncated to 72 bytes)."""
-    return pwd_context.verify(plain_password[:72], hashed_password)
+    try:
+        pwd_bytes = plain_password[:72].encode("utf-8")
+        hash_bytes = hashed_password.encode("utf-8")
+        return bcrypt.checkpw(pwd_bytes, hash_bytes)
+    except Exception:
+        return False
 
 
 def get_password_hash(password: str) -> str:
     """Generate a bcrypt hash from a raw password (truncated to 72 bytes)."""
-    return pwd_context.hash(password[:72])
+    pwd_bytes = password[:72].encode("utf-8")
+    salt = bcrypt.gensalt(rounds=settings.BCRYPT_ROUNDS)
+    return bcrypt.hashpw(pwd_bytes, salt).decode("utf-8")
 
 
 # ==============================================================================

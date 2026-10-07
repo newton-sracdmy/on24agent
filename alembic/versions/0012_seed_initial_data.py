@@ -10,8 +10,8 @@ from alembic import op
 import sqlalchemy as sa
 from sqlalchemy.dialects import postgresql
 
-revision: str = "0012_seed_initial_data"
-down_revision: Union[str, None] = "0011_indexes_and_performance"
+revision: str = "0012_seed_data"
+down_revision: Union[str, None] = "0011_indexes_perf"
 branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
 

@@ -10,8 +10,8 @@ from alembic import op
 import sqlalchemy as sa
 from sqlalchemy.dialects import postgresql
 
-revision: str = "0003_ai_and_channels_schema"
-down_revision: Union[str, None] = "0002_identity_schema"
+revision: str = "0003_ai_channels"
+down_revision: Union[str, None] = "0002_identity"
 branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
 

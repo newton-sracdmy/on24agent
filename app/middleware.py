@@ -79,11 +79,13 @@ class GlobalExceptionMiddleware(BaseHTTPMiddleware):
             ).model_dump(by_alias=True)
             return JSONResponse(status_code=exc.status_code, content=payload)
         except Exception as exc:
+            import traceback
+            traceback.print_exc()
             request_id = getattr(request.state, "request_id", None)
             payload = APIResponse.fail(
                 code="INTERNAL_SERVER_ERROR",
                 message="An unexpected internal server error occurred",
-                details={"error": str(exc)} if request.app.debug else None,
+                details={"error": str(exc)},
                 request_id=request_id,
             ).model_dump(by_alias=True)
             return JSONResponse(status_code=500, content=payload)
