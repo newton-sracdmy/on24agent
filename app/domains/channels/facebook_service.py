@@ -192,7 +192,7 @@ async def _process_facebook_message(page_id: str, sender_psid: str, user_text: s
             {"org_id": org_id, "conv_id": conversation_id, "content": user_text},
         )
 
-        # 5. Fetch RAG Knowledge Chunks & Generate AI Answer
+        # 5. Fetch RAG Knowledge Chunks & Generate AI Answer via Google Gemini
         q_chunks = await session.execute(
             text(
                 """
@@ -206,33 +206,62 @@ async def _process_facebook_message(page_id: str, sender_psid: str, user_text: s
             {"org_id": org_id},
         )
         chunk_rows = q_chunks.mappings().all()
+        kb_context = "\n\n".join([f"[{r['title']}]: {r['content_text']}" for r in chunk_rows])
 
-        # Dynamic semantic & keyword matching against user question
-        lower_q = user_text.lower()
-        q_words = [w.strip() for w in lower_q.replace("?", "").replace(",", "").replace(".", "").replace("!", "").split() if len(w.strip()) > 1]
+        # Fetch recent conversation turns
+        q_hist = await session.execute(
+            text(
+                """
+                SELECT sender_type, text_content
+                FROM messages
+                WHERE conversation_id = :conv_id
+                ORDER BY created_at ASC
+                LIMIT 6;
+                """
+            ),
+            {"conv_id": conversation_id},
+        )
+        chat_hist = [dict(r) for r in q_hist.mappings().all()]
 
-        best_chunk = None
-        best_score = 0
-        for row in chunk_rows:
-            chunk_text = row["content_text"]
-            chunk_lower = chunk_text.lower()
-            matched = sum(1 for w in q_words if w in chunk_lower)
-            if matched > best_score:
-                best_score = matched
-                best_chunk = chunk_text
+        system_prompt = (
+            "You are the official 24/7 AI Community Operations Specialist for TechVibe Members Club. "
+            "You assist community members with guidelines, VIP membership, events, bootcamps, and technical questions. "
+            "Be enthusiastic, polite, and clear. Format cleanly for Facebook Messenger with emojis and bullet points."
+        )
 
-        # Generate grounded response
-        if best_chunk and best_score >= 1:
-            if "rule" in lower_q or "guideline" in lower_q or "নিয়ম" in lower_q:
-                ai_reply = f"Welcome to TechVibe Members Club! Our community guidelines:\n{best_chunk}"
+        from app.domains.ai.gemini_service import generate_gemini_response
+        ai_reply = await generate_gemini_response(
+            user_query=user_text,
+            system_prompt=system_prompt,
+            kb_context=kb_context,
+            chat_history=chat_hist,
+        )
+
+        # Fallback to extractive heuristic RAG matcher if Gemini is unavailable
+        if not ai_reply:
+            lower_q = user_text.lower()
+            q_words = [w.strip() for w in lower_q.replace("?", "").replace(",", "").replace(".", "").replace("!", "").split() if len(w.strip()) > 1]
+            best_chunk = None
+            best_score = 0
+            for row in chunk_rows:
+                chunk_text = row["content_text"]
+                chunk_lower = chunk_text.lower()
+                matched = sum(1 for w in q_words if w in chunk_lower)
+                if matched > best_score:
+                    best_score = matched
+                    best_chunk = chunk_text
+
+            if best_chunk and best_score >= 1:
+                if "rule" in lower_q or "guideline" in lower_q or "নিয়ম" in lower_q:
+                    ai_reply = f"Welcome to TechVibe Members Club! Our community guidelines:\n{best_chunk}"
+                else:
+                    ai_reply = f"According to TechVibe official guidelines:\n\n{best_chunk}\n\nFeel free to ask if you have more questions!"
+            elif "join" in lower_q or "group" in lower_q or "মেম্বার" in lower_q or "যুক্ত" in lower_q:
+                ai_reply = "Welcome to TechVibe! You can participate in all member discussions right here and inside our Facebook Group. Feel free to ask any tech or development questions anytime!"
+            elif "event" in lower_q or "session" in lower_q or "সময়" in lower_q or "friday" in lower_q:
+                ai_reply = "Our weekly live AI & tech sessions are hosted every Friday at 8:00 PM (GMT+6) in our community group. Don't miss it!"
             else:
-                ai_reply = f"According to TechVibe official guidelines:\n\n{best_chunk}\n\nFeel free to ask if you have more questions!"
-        elif "join" in lower_q or "group" in lower_q or "মেম্বার" in lower_q or "যুক্ত" in lower_q:
-            ai_reply = "Welcome to TechVibe! You can participate in all member discussions right here and inside our Facebook Group. Feel free to ask any tech or development questions anytime!"
-        elif "event" in lower_q or "session" in lower_q or "সময়" in lower_q or "friday" in lower_q:
-            ai_reply = "Our weekly live AI & tech sessions are hosted every Friday at 8:00 PM (GMT+6) in our community group. Don't miss it!"
-        else:
-            ai_reply = f"Hello from TechVibe AI Assistant! Thanks for reaching out. We are glad to have you in TechVibe Members Club. How can I assist your tech journey today?"
+                ai_reply = f"Hello from TechVibe AI Assistant! Thanks for reaching out. We are glad to have you in TechVibe Members Club. How can I assist your tech journey today?"
 
         # 6. Dispatch AI Reply via Meta Graph API
         if page_access_token:
