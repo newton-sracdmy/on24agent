@@ -6,6 +6,11 @@ from app.config import settings
 webhooks_router = APIRouter()
 
 
+from fastapi.responses import PlainTextResponse
+import asyncio
+from app.domains.channels.whatsapp_service import handle_inbound_whatsapp_event
+
+
 @webhooks_router.get("/whatsapp")
 async def verify_whatsapp_webhook(
     hub_mode: str = Query(alias="hub.mode"),
@@ -14,16 +19,29 @@ async def verify_whatsapp_webhook(
 ) -> Response:
     """Handles Meta WhatsApp Cloud API webhook handshake verification."""
     if hub_mode == "subscribe" and hub_verify_token == settings.META_WEBHOOK_VERIFY_TOKEN:
-        return Response(content=hub_challenge, media_type="text/plain", status_code=200)
+        return PlainTextResponse(
+            content=str(hub_challenge),
+            status_code=200,
+            headers={
+                "Content-Type": "text/plain; charset=utf-8",
+                "Content-Encoding": "identity",
+            },
+        )
     raise HTTPException(status_code=403, detail="Verification token mismatch")
 
 
 @webhooks_router.post("/whatsapp")
 async def receive_whatsapp_webhook(request: Request) -> dict:
     """Receives asynchronous inbound messages and delivery status updates from WhatsApp."""
-    payload = await request.json()
-    # Inbound processing dispatched to background worker
-    return {"status": "received"}
+    try:
+        payload = await request.json()
+    except Exception:
+        payload = {}
+
+    if payload:
+        asyncio.create_task(handle_inbound_whatsapp_event(payload))
+
+    return {"status": "EVENT_RECEIVED"}
 
 
 from fastapi.responses import PlainTextResponse

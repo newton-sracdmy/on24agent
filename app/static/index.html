@@ -400,37 +400,121 @@
         <div class="max-w-5xl mx-auto space-y-6">
           <div class="flex items-center justify-between">
             <div>
-              <h2 class="text-xl font-bold text-white">RAG Knowledge Bases & pgvector</h2>
-              <p class="text-xs text-slate-400">Hierarchical Navigable Small World (HNSW) vector search on company documents</p>
+              <div class="flex items-center gap-2">
+                <h2 class="text-xl font-bold text-white">RAG Knowledge Bases & pgvector</h2>
+                <span class="px-2 py-0.5 rounded bg-emerald-500/20 text-emerald-400 text-[10px] font-bold uppercase tracking-wider" id="activeKbBadge">Active KB: TechVibe</span>
+              </div>
+              <p class="text-xs text-slate-400">PostgreSQL pgvector dense semantic embeddings (1536-dim) grounding WhatsApp & Messenger AI</p>
             </div>
-            <button onclick="document.getElementById('docUploadModal').classList.toggle('hidden')" class="px-4 py-2 bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold text-xs rounded-xl transition">
-              + Ingest Document
-            </button>
-          </div>
-
-          <!-- Document Upload Modal Form -->
-          <div id="docUploadModal" class="p-5 rounded-2xl border border-slate-800 bg-slate-900/80 space-y-3">
-            <h3 class="text-sm font-bold text-white">Ingest Raw Knowledge Text into pgvector</h3>
-            <input type="text" id="ragDocTitle" placeholder="Document Title (e.g. Return Policy 2026)" class="w-full bg-slate-950 border border-slate-700 rounded-xl px-4 py-2 text-xs text-white">
-            <textarea id="ragDocText" rows="3" placeholder="Paste document content, product specifications, or enterprise FAQ guidelines here..." class="w-full bg-slate-950 border border-slate-700 rounded-xl p-3 text-xs text-white"></textarea>
-            <button onclick="submitRAGDoc()" class="px-4 py-2 bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold text-xs rounded-xl transition">
-              Process & Index in Vector DB
-            </button>
-          </div>
-
-          <!-- Vector Search Playground -->
-          <div class="p-5 rounded-2xl border border-slate-800 bg-slate-900/60 space-y-4">
-            <h3 class="text-sm font-bold text-white flex items-center gap-2">
-              <i data-lucide="search" class="w-4 h-4 text-emerald-400"></i> Semantic Vector Retrieval Tester
-            </h3>
-            <div class="flex gap-3">
-              <input type="text" id="ragSearchQuery" placeholder="Ask question (e.g. What is the SLA guarantee for Saudi voice agents?)..." class="flex-1 bg-slate-950 border border-slate-700 rounded-xl px-4 py-2.5 text-xs text-white">
-              <button onclick="runRAGSearch()" class="px-5 py-2.5 bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold text-xs rounded-xl transition">
-                Search Vector DB
+            <div class="flex gap-2">
+              <button onclick="toggleDocUploadModal()" class="px-4 py-2 bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold text-xs rounded-xl transition flex items-center gap-1.5 shadow-md shadow-emerald-500/20">
+                <i data-lucide="plus" class="w-4 h-4"></i> Ingest New Document
               </button>
             </div>
-            <div id="ragResultsBox" class="p-4 rounded-xl bg-slate-950 border border-slate-800/80 text-xs text-slate-300 min-h-[60px] space-y-2">
-              <p class="text-slate-500 italic">Hit 'Search Vector DB' to test pgvector HNSW cosine ranking.</p>
+          </div>
+
+          <!-- Document Upload & Ingestion Modal Form -->
+          <div id="docUploadModal" class="p-6 rounded-2xl border border-emerald-500/30 bg-slate-900/90 shadow-2xl space-y-4 hidden">
+            <div class="flex items-center justify-between border-b border-slate-800 pb-3">
+              <div>
+                <h3 class="text-sm font-bold text-white flex items-center gap-2">
+                  <i data-lucide="file-up" class="w-4 h-4 text-emerald-400"></i> Ingest Document into Knowledge Base
+                </h3>
+                <p class="text-[11px] text-slate-400">Automatically chunks, generates vectors, and indexes in PostgreSQL pgvector</p>
+              </div>
+              <button onclick="toggleDocUploadModal()" class="text-slate-400 hover:text-white text-xs font-bold px-2 py-1 bg-slate-800 rounded-lg">✕ Close</button>
+            </div>
+
+            <!-- Ingestion Type Tabs -->
+            <div class="flex gap-2 border-b border-slate-800 pb-2">
+              <button id="btnUploadFileMode" onclick="switchUploadMode('file')" class="px-3 py-1.5 rounded-lg text-xs font-bold bg-emerald-500/20 text-emerald-400 border border-emerald-500/30">
+                📁 Upload File (PDF, TXT, MD, CSV)
+              </button>
+              <button id="btnUploadTextMode" onclick="switchUploadMode('text')" class="px-3 py-1.5 rounded-lg text-xs font-bold text-slate-400 hover:text-slate-200">
+                ✍️ Paste Text / FAQ Rules
+              </button>
+            </div>
+
+            <!-- Mode 1: File Upload -->
+            <div id="uploadFileArea" class="space-y-3">
+              <div class="border-2 border-dashed border-slate-700 hover:border-emerald-500/50 rounded-xl p-6 text-center cursor-pointer bg-slate-950/60 transition" onclick="document.getElementById('ragFileInput').click()">
+                <i data-lucide="upload-cloud" class="w-8 h-8 text-emerald-400 mx-auto mb-2"></i>
+                <p class="text-xs text-white font-medium" id="ragFileNameDisplay">Click to browse or drag & drop PDF, TXT, MD or CSV file</p>
+                <p class="text-[10px] text-slate-500 mt-1">Supported formats: PDF documents, Markdown (.md), Plain Text (.txt)</p>
+                <input type="file" id="ragFileInput" class="hidden" accept=".pdf,.txt,.md,.csv,.json" onchange="handleFileSelected(event)">
+              </div>
+              <button onclick="submitRAGFile()" id="btnSubmitFile" class="w-full py-2.5 bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold text-xs rounded-xl transition flex items-center justify-center gap-1.5">
+                <span>Upload, Chunk & Index in pgvector</span>
+              </button>
+            </div>
+
+            <!-- Mode 2: Paste Raw Text -->
+            <div id="uploadTextArea" class="space-y-3 hidden">
+              <div>
+                <label class="block text-[11px] font-medium text-slate-400 mb-1">Document Title</label>
+                <input type="text" id="ragDocTitle" placeholder="e.g. TechVibe VIP Membership & Refund Policy" class="w-full bg-slate-950 border border-slate-700 rounded-xl px-4 py-2 text-xs text-white focus:border-emerald-500 focus:outline-none">
+              </div>
+              <div>
+                <label class="block text-[11px] font-medium text-slate-400 mb-1">Content / Guidelines / FAQ</label>
+                <textarea id="ragDocText" rows="5" placeholder="Paste guidelines, FAQs, event rules, product specs, or policy text here..." class="w-full bg-slate-950 border border-slate-700 rounded-xl p-3 text-xs text-white focus:border-emerald-500 focus:outline-none"></textarea>
+              </div>
+              <button onclick="submitRAGDoc()" id="btnSubmitText" class="w-full py-2.5 bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold text-xs rounded-xl transition flex items-center justify-center gap-1.5">
+                <span>Split into Chunks & Index in pgvector</span>
+              </button>
+            </div>
+
+            <div id="ragIngestStatus" class="hidden text-xs p-3 rounded-xl"></div>
+          </div>
+
+          <!-- Ingested Documents List Table -->
+          <div class="p-5 rounded-2xl border border-slate-800 bg-slate-900/60 space-y-3">
+            <div class="flex items-center justify-between">
+              <h3 class="text-sm font-bold text-white flex items-center gap-2">
+                <i data-lucide="files" class="w-4 h-4 text-emerald-400"></i> Ingested Knowledge Base Documents
+              </h3>
+              <button onclick="loadKnowledgeBaseData()" class="text-[11px] text-emerald-400 hover:underline flex items-center gap-1">
+                <i data-lucide="refresh-cw" class="w-3 h-3"></i> Refresh List
+              </button>
+            </div>
+
+            <div class="overflow-x-auto">
+              <table class="w-full text-left text-xs">
+                <thead class="text-slate-400 border-b border-slate-800 text-[11px] uppercase">
+                  <tr>
+                    <th class="pb-2 font-semibold">Document Title</th>
+                    <th class="pb-2 font-semibold">Type</th>
+                    <th class="pb-2 font-semibold">Size</th>
+                    <th class="pb-2 font-semibold">Chunks</th>
+                    <th class="pb-2 font-semibold">Status</th>
+                    <th class="pb-2 font-semibold text-right">Added</th>
+                  </tr>
+                </thead>
+                <tbody id="ragDocsTableBody" class="divide-y divide-slate-800/60 text-slate-300">
+                  <tr>
+                    <td colspan="6" class="py-4 text-center text-slate-500 italic">Loading indexed documents from pgvector...</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          <!-- Semantic Vector Retrieval Tester -->
+          <div class="p-5 rounded-2xl border border-slate-800 bg-slate-900/60 space-y-4">
+            <div class="flex items-center justify-between">
+              <h3 class="text-sm font-bold text-white flex items-center gap-2">
+                <i data-lucide="sparkles" class="w-4 h-4 text-emerald-400"></i> Semantic pgvector Cosine Search Playground
+              </h3>
+              <span class="text-[10px] text-slate-400">Real-time cosine distance test</span>
+            </div>
+            <p class="text-xs text-slate-400">Ask any question to test which knowledge chunks the AI agent retrieves for WhatsApp & Messenger users.</p>
+            <div class="flex gap-3">
+              <input type="text" id="ragSearchQuery" onkeypress="if(event.key==='Enter') runRAGSearch()" placeholder="e.g. What are the rules of TechVibe? / How to get VIP membership?..." class="flex-1 bg-slate-950 border border-slate-700 rounded-xl px-4 py-2.5 text-xs text-white focus:border-emerald-500 focus:outline-none">
+              <button onclick="runRAGSearch()" id="btnRagSearch" class="px-5 py-2.5 bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold text-xs rounded-xl transition flex items-center gap-1.5 shadow-md shadow-emerald-500/20">
+                <i data-lucide="search" class="w-3.5 h-3.5"></i> Search Vector DB
+              </button>
+            </div>
+            <div id="ragResultsBox" class="p-4 rounded-xl bg-slate-950 border border-slate-800/80 text-xs text-slate-300 min-h-[70px] space-y-2">
+              <p class="text-slate-500 italic">Type a query above and click 'Search Vector DB' to see matched semantic chunks.</p>
             </div>
           </div>
         </div>
@@ -577,6 +661,21 @@
           
           // 4. Fetch live CRM Contacts
           fetchLiveContacts();
+
+          // 5. Fetch live Knowledge Base & Ingested Documents
+          loadKnowledgeBaseData();
+
+          // 5. Real-time background polling every 2.5s
+          if (window._livePollTimer) clearInterval(window._livePollTimer);
+          window._livePollTimer = setInterval(async () => {
+            if (authToken) {
+              await fetchLiveConversations(true);
+              if (activeConvId) {
+                await fetchLiveMessages(activeConvId, false);
+              }
+              await fetchLiveCredits();
+            }
+          }, 2500);
         }
       } catch (err) {
         console.warn("Using offline demo fallback:", err);
@@ -624,7 +723,9 @@
       }
     }
 
-    async function fetchLiveConversations() {
+    let lastMessageCount = 0;
+
+    async function fetchLiveConversations(isBackground = false) {
       if (!authToken) return;
       try {
         const res = await fetch('/api/v1/conversations/', {
@@ -635,12 +736,20 @@
           conversationsCache = json.data.items;
           const list = document.getElementById('conversationList');
           list.innerHTML = conversationsCache.map((c, i) => {
-            const isFirst = i === 0;
-            const channelBadge = c.channel_account_id?.includes('10') ? 'WhatsApp' : 'Web Chat';
-            const badgeColor = c.channel_account_id?.includes('10') ? 'bg-emerald-500/20 text-emerald-400' : 'bg-sky-500/20 text-sky-400';
+            const isSelected = activeConvId ? c.id === activeConvId : i === 0;
+            let channelBadge = 'Web Chat';
+            let badgeColor = 'bg-sky-500/20 text-sky-400';
+            const subLower = (c.subject || '').toLowerCase();
+            if (subLower.includes('whatsapp') || c.channel_account_id?.includes('11') || c.channel_account_id?.includes('10')) {
+              channelBadge = 'WhatsApp';
+              badgeColor = 'bg-emerald-500/20 text-emerald-400';
+            } else if (subLower.includes('messenger') || c.channel_account_id?.includes('210')) {
+              channelBadge = 'Messenger';
+              badgeColor = 'bg-blue-500/20 text-blue-400';
+            }
             const contactName = c.subject || `Thread #${c.id.substring(0, 8)}`;
             return `
-              <div onclick="selectConversation('${c.id}')" id="conv-item-${c.id}" class="p-3 rounded-xl ${isFirst ? 'bg-slate-800/80 border border-slate-700/80' : 'bg-slate-900/60 border border-slate-800/80'} cursor-pointer hover:bg-slate-800 transition">
+              <div onclick="selectConversation('${c.id}')" id="conv-item-${c.id}" class="p-3 rounded-xl ${isSelected ? 'bg-slate-800/80 border border-slate-700/80' : 'bg-slate-900/60 border border-slate-800/80'} cursor-pointer hover:bg-slate-800 transition">
                 <div class="flex items-center justify-between mb-1">
                   <div class="flex items-center gap-2">
                     <span class="text-xs font-bold text-white truncate max-w-[140px]">${contactName}</span>
@@ -657,7 +766,7 @@
             `;
           }).join('');
 
-          if (!activeConvId && conversationsCache.length > 0) {
+          if (!activeConvId && conversationsCache.length > 0 && !isBackground) {
             selectConversation(conversationsCache[0].id);
           }
         }
@@ -668,29 +777,25 @@
 
     async function selectConversation(convId) {
       activeConvId = convId;
-      conversationsCache.forEach(c => {
-        const el = document.getElementById(`conv-item-${c.id}`);
-        if (el) {
-          if (c.id === convId) {
-            el.className = "p-3 rounded-xl bg-slate-800/80 border border-slate-700/80 cursor-pointer hover:bg-slate-800 transition";
-          } else {
-            el.className = "p-3 rounded-xl bg-slate-900/60 border border-slate-800/80 cursor-pointer hover:bg-slate-800/50 transition";
-          }
-        }
-      });
+      lastMessageCount = 0;
+      await fetchLiveMessages(convId, true);
+    }
 
-      const conv = conversationsCache.find(c => c.id === convId);
-      if (conv) {
-        document.getElementById('chatContactName').textContent = conv.subject || `Thread #${conv.id.substring(0,8)}`;
-      }
-
-      if (!authToken) return;
+    async function fetchLiveMessages(convId, forceScroll = false) {
+      if (!authToken || !convId) return;
       try {
+        const conv = conversationsCache.find(c => c.id === convId);
+        if (conv) {
+          document.getElementById('chatContactName').textContent = conv.subject || `Thread #${conv.id.substring(0,8)}`;
+        }
         const res = await fetch(`/api/v1/conversations/${convId}/messages`, {
           headers: { 'Authorization': `Bearer ${authToken}` }
         });
         const json = await res.json();
         if (json.success && json.data) {
+          if (json.data.length === lastMessageCount && !forceScroll) return;
+          lastMessageCount = json.data.length;
+
           const stream = document.getElementById('messageStream');
           stream.innerHTML = json.data.map(m => {
             const isContact = m.sender_type === 'contact';
@@ -718,7 +823,7 @@
                       ${m.text_content || ''}
                     </div>
                     <div class="flex items-center justify-end gap-1.5 text-[10px] text-slate-400 mt-1">
-                      <span>${isAi ? 'Apex Support AI' : 'Human Agent'}</span> • <i data-lucide="check" class="w-3 h-3 text-emerald-400"></i>
+                      <span>${isAi ? 'TechVibe AI Specialist' : 'Human Agent'}</span> • <i data-lucide="check" class="w-3 h-3 text-emerald-400"></i>
                     </div>
                   </div>
                   <div class="w-7 h-7 rounded-full ${isAi ? 'bg-emerald-500 text-slate-950' : 'bg-slate-800 text-white'} flex items-center justify-center text-xs font-bold shrink-0">
@@ -749,6 +854,10 @@
       const activeNav = document.getElementById(`nav-${tabId}`);
       activeNav.classList.add('bg-emerald-500/10', 'text-emerald-400', 'border', 'border-emerald-500/20', 'font-semibold');
       activeNav.classList.remove('text-slate-400', 'font-medium');
+
+      if (tabId === 'rag') {
+        loadKnowledgeBaseData();
+      }
     }
 
     function insertCanned(type) {
@@ -852,29 +961,250 @@
       alert("Demo omnichannel conversations and CRM contacts populated from PostgreSQL.");
     }
 
-    function submitRAGDoc() {
-      const title = document.getElementById('ragDocTitle').value;
-      const text = document.getElementById('ragDocText').value;
-      if (!title || !text) {
-        alert("Please enter title and content");
-        return;
-      }
-      alert(`Document '${title}' successfully split into semantic chunks and indexed in PostgreSQL pgvector!`);
-      document.getElementById('docUploadModal').classList.add('hidden');
+    let currentKbId = null;
+    let selectedFile = null;
+
+    function toggleDocUploadModal() {
+      const modal = document.getElementById('docUploadModal');
+      modal.classList.toggle('hidden');
+      document.getElementById('ragIngestStatus').classList.add('hidden');
     }
 
-    function runRAGSearch() {
-      const q = document.getElementById('ragSearchQuery').value;
+    function switchUploadMode(mode) {
+      if (mode === 'file') {
+        document.getElementById('uploadFileArea').classList.remove('hidden');
+        document.getElementById('uploadTextArea').classList.add('hidden');
+        document.getElementById('btnUploadFileMode').className = "px-3 py-1.5 rounded-lg text-xs font-bold bg-emerald-500/20 text-emerald-400 border border-emerald-500/30";
+        document.getElementById('btnUploadTextMode').className = "px-3 py-1.5 rounded-lg text-xs font-bold text-slate-400 hover:text-slate-200";
+      } else {
+        document.getElementById('uploadFileArea').classList.add('hidden');
+        document.getElementById('uploadTextArea').classList.remove('hidden');
+        document.getElementById('btnUploadTextMode').className = "px-3 py-1.5 rounded-lg text-xs font-bold bg-emerald-500/20 text-emerald-400 border border-emerald-500/30";
+        document.getElementById('btnUploadFileMode').className = "px-3 py-1.5 rounded-lg text-xs font-bold text-slate-400 hover:text-slate-200";
+      }
+    }
+
+    function handleFileSelected(event) {
+      const file = event.target.files[0];
+      if (file) {
+        selectedFile = file;
+        document.getElementById('ragFileNameDisplay').textContent = `Selected: ${file.name} (${(file.size / 1024).toFixed(1)} KB)`;
+      }
+    }
+
+    async function loadKnowledgeBaseData() {
+      if (!authToken) return;
+      try {
+        const res = await fetch('/api/v1/rag/', {
+          headers: { 'Authorization': `Bearer ${authToken}` }
+        });
+        const json = await res.json();
+        if (json.success && json.data && json.data.length > 0) {
+          const kb = json.data[0];
+          currentKbId = kb.id;
+          document.getElementById('activeKbBadge').textContent = `Active KB: ${kb.name}`;
+          await fetchLiveDocuments(currentKbId);
+        } else {
+          document.getElementById('ragDocsTableBody').innerHTML = `
+            <tr><td colspan="6" class="py-4 text-center text-slate-500 italic">No Knowledge Base configured yet.</td></tr>
+          `;
+        }
+      } catch (err) {
+        console.error("Failed to load Knowledge Base:", err);
+      }
+    }
+
+    async function fetchLiveDocuments(kbId) {
+      if (!authToken || !kbId) return;
+      try {
+        const res = await fetch(`/api/v1/rag/${kbId}/documents`, {
+          headers: { 'Authorization': `Bearer ${authToken}` }
+        });
+        const json = await res.json();
+        const tbody = document.getElementById('ragDocsTableBody');
+        if (json.success && json.data && json.data.length > 0) {
+          tbody.innerHTML = json.data.map(doc => {
+            const ext = doc.title.split('.').pop().toUpperCase();
+            const sizeKb = (doc.file_size_bytes / 1024).toFixed(1);
+            const dateStr = new Date(doc.created_at).toLocaleDateString([], { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' });
+            return `
+              <tr class="hover:bg-slate-800/40">
+                <td class="py-3 font-semibold text-white flex items-center gap-2">
+                  <i data-lucide="file-text" class="w-4 h-4 text-emerald-400"></i>
+                  <span>${doc.title}</span>
+                </td>
+                <td class="py-3"><span class="px-2 py-0.5 rounded bg-slate-800 text-slate-300 font-mono text-[10px]">${ext}</span></td>
+                <td class="py-3 text-slate-400">${sizeKb} KB</td>
+                <td class="py-3 text-emerald-400 font-bold">${doc.chunk_count || 1} chunks</td>
+                <td class="py-3">
+                  <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded bg-emerald-500/20 text-emerald-400 font-semibold capitalize text-[10px]">
+                    <span class="w-1.5 h-1.5 rounded-full bg-emerald-400"></span> ${doc.status}
+                  </span>
+                </td>
+                <td class="py-3 text-right text-slate-400">${dateStr}</td>
+              </tr>
+            `;
+          }).join('');
+          lucide.createIcons();
+        } else {
+          tbody.innerHTML = `
+            <tr><td colspan="6" class="py-4 text-center text-slate-500 italic">No documents ingested yet. Upload a PDF or paste text above!</td></tr>
+          `;
+        }
+      } catch (err) {
+        console.error("Error fetching documents:", err);
+      }
+    }
+
+    async function submitRAGFile() {
+      if (!selectedFile) {
+        alert("Please select a file to upload (PDF, TXT, MD, CSV)");
+        return;
+      }
+      if (!currentKbId || !authToken) {
+        alert("Knowledge Base not initialized yet");
+        return;
+      }
+      const btn = document.getElementById('btnSubmitFile');
+      const statusDiv = document.getElementById('ragIngestStatus');
+      btn.disabled = true;
+      btn.innerHTML = `<i data-lucide="loader-2" class="w-4 h-4 animate-spin inline mr-1"></i> Processing & chunking in pgvector...`;
+      lucide.createIcons();
+
+      try {
+        const formData = new FormData();
+        formData.append("file", selectedFile);
+
+        const res = await fetch(`/api/v1/rag/${currentKbId}/upload`, {
+          method: 'POST',
+          headers: { 'Authorization': `Bearer ${authToken}` },
+          body: formData
+        });
+        const json = await res.json();
+        if (json.success) {
+          statusDiv.className = "text-xs p-3 rounded-xl bg-emerald-950/80 border border-emerald-500/40 text-emerald-300 block";
+          statusDiv.innerHTML = `✅ Successfully ingested <strong>${selectedFile.name}</strong>! Parsed, segmented into semantic chunks, and embedded into PostgreSQL pgvector.`;
+          selectedFile = null;
+          document.getElementById('ragFileInput').value = '';
+          document.getElementById('ragFileNameDisplay').textContent = "Click to browse or drag & drop PDF, TXT, MD or CSV file";
+          await fetchLiveDocuments(currentKbId);
+        } else {
+          statusDiv.className = "text-xs p-3 rounded-xl bg-rose-950/80 border border-rose-500/40 text-rose-300 block";
+          statusDiv.textContent = `Error: ${json.error?.message || 'Ingestion failed'}`;
+        }
+      } catch (err) {
+        statusDiv.className = "text-xs p-3 rounded-xl bg-rose-950/80 border border-rose-500/40 text-rose-300 block";
+        statusDiv.textContent = `Network error: ${err.message}`;
+      } finally {
+        btn.disabled = false;
+        btn.innerHTML = `<span>Upload, Chunk & Index in pgvector</span>`;
+      }
+    }
+
+    async function submitRAGDoc() {
+      const title = document.getElementById('ragDocTitle').value.trim();
+      const text = document.getElementById('ragDocText').value.trim();
+      if (!title || !text) {
+        alert("Please enter both Document Title and Content");
+        return;
+      }
+      if (!currentKbId || !authToken) {
+        alert("Knowledge Base not initialized yet");
+        return;
+      }
+
+      const btn = document.getElementById('btnSubmitText');
+      const statusDiv = document.getElementById('ragIngestStatus');
+      btn.disabled = true;
+      btn.innerHTML = `<i data-lucide="loader-2" class="w-4 h-4 animate-spin inline mr-1"></i> Indexing into pgvector...`;
+      lucide.createIcons();
+
+      try {
+        const res = await fetch(`/api/v1/rag/${currentKbId}/documents`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${authToken}`
+          },
+          body: JSON.stringify({
+            title: title,
+            raw_text: text,
+            source_type: 'manual_entry'
+          })
+        });
+        const json = await res.json();
+        if (json.success) {
+          statusDiv.className = "text-xs p-3 rounded-xl bg-emerald-950/80 border border-emerald-500/40 text-emerald-300 block";
+          statusDiv.innerHTML = `✅ Successfully indexed <strong>${title}</strong> into PostgreSQL pgvector! AI Agent is now immediately aware of this knowledge.`;
+          document.getElementById('ragDocTitle').value = '';
+          document.getElementById('ragDocText').value = '';
+          await fetchLiveDocuments(currentKbId);
+        } else {
+          statusDiv.className = "text-xs p-3 rounded-xl bg-rose-950/80 border border-rose-500/40 text-rose-300 block";
+          statusDiv.textContent = `Error: ${json.error?.message || 'Failed to index'}`;
+        }
+      } catch (err) {
+        statusDiv.className = "text-xs p-3 rounded-xl bg-rose-950/80 border border-rose-500/40 text-rose-300 block";
+        statusDiv.textContent = `Error: ${err.message}`;
+      } finally {
+        btn.disabled = false;
+        btn.innerHTML = `<span>Split into Chunks & Index in pgvector</span>`;
+      }
+    }
+
+    async function runRAGSearch() {
+      const q = document.getElementById('ragSearchQuery').value.trim();
+      if (!q) {
+        alert("Please enter a search query");
+        return;
+      }
+      if (!currentKbId || !authToken) {
+        alert("Knowledge base not loaded yet");
+        return;
+      }
+
       const box = document.getElementById('ragResultsBox');
-      box.innerHTML = `
-        <div class="p-3 rounded-lg bg-slate-900 border border-emerald-500/30">
-          <div class="flex justify-between font-bold text-white mb-1">
-            <span>Result: Acme Return Policy & Shipping Guidelines</span>
-            <span class="text-emerald-400">Cosine Match: 0.941</span>
-          </div>
-          <p class="text-slate-300">"...Orders are delivered in 1-2 business days in Dhaka. Express couriers notify the recipient before delivery..."</p>
-        </div>
-      `;
+      const btn = document.getElementById('btnRagSearch');
+      btn.disabled = true;
+      box.innerHTML = `<p class="text-slate-400 italic flex items-center gap-1.5"><i data-lucide="loader-2" class="w-3.5 h-3.5 animate-spin"></i> Querying pgvector HNSW index with cosine distance...</p>`;
+      lucide.createIcons();
+
+      try {
+        const res = await fetch(`/api/v1/rag/${currentKbId}/search`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${authToken}`
+          },
+          body: JSON.stringify({ query: q, top_k: 4 })
+        });
+        const json = await res.json();
+        if (json.success && json.data && json.data.length > 0) {
+          box.innerHTML = json.data.map((chunk, i) => {
+            const scorePercent = (chunk.score * 100).toFixed(1);
+            return `
+              <div class="p-3.5 rounded-xl bg-slate-900 border border-emerald-500/30 space-y-1.5 hover:border-emerald-500/60 transition">
+                <div class="flex items-center justify-between font-bold text-white">
+                  <div class="flex items-center gap-2">
+                    <span class="w-5 h-5 rounded-full bg-emerald-500/20 text-emerald-400 flex items-center justify-center text-[10px] font-mono">#${i + 1}</span>
+                    <span class="text-xs text-white">${chunk.document_title || 'Document Chunk'}</span>
+                  </div>
+                  <span class="text-emerald-400 font-mono text-[11px] bg-emerald-950 px-2 py-0.5 rounded border border-emerald-800">Cosine Match: ${chunk.score} (${scorePercent}%)</span>
+                </div>
+                <p class="text-slate-200 text-xs leading-relaxed bg-slate-950/70 p-2.5 rounded-lg border border-slate-800">${chunk.content_text}</p>
+                <div class="text-[10px] text-slate-500">Tokens: ${chunk.token_count} • Dense Vector (1536d)</div>
+              </div>
+            `;
+          }).join('');
+          lucide.createIcons();
+        } else {
+          box.innerHTML = `<p class="text-amber-400">No matching chunks found above threshold in vector DB.</p>`;
+        }
+      } catch (err) {
+        box.innerHTML = `<p class="text-rose-400">Search error: ${err.message}</p>`;
+      } finally {
+        btn.disabled = false;
+      }
     }
 
     // Auto-initialize on page load

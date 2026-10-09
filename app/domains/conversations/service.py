@@ -82,7 +82,7 @@ class ConversationService:
         )
         await self.session.flush()
 
-        # Dispatch outbound message to external channel if applicable (e.g. Facebook Messenger)
+        # Dispatch outbound message to external channel if applicable (e.g. Facebook Messenger, WhatsApp)
         if sender_type == MessageSenderType.AGENT and data.text_content:
             try:
                 import json
@@ -90,23 +90,39 @@ class ConversationService:
                 from sqlalchemy import text
                 from app.security import decrypt_secret
                 from app.domains.channels.facebook_service import send_facebook_message
+                from app.domains.channels.whatsapp_service import send_whatsapp_message
 
                 q_ch = await self.session.execute(
-                    text("SELECT encrypted_credentials FROM channel_accounts WHERE id = :chid AND is_deleted = false;"),
+                    text("SELECT account_identifier, encrypted_credentials FROM channel_accounts WHERE id = :chid AND is_deleted = false;"),
                     {"chid": conv.channel_account_id},
                 )
                 ch_data = q_ch.mappings().first()
                 if ch_data and ch_data["encrypted_credentials"]:
                     creds = json.loads(decrypt_secret(ch_data["encrypted_credentials"]))
-                    page_token = creds.get("page_access_token")
                     q_contact = await self.session.execute(
-                        text("SELECT custom_attributes FROM contacts WHERE id = :cid;"),
+                        text("SELECT phone_number, custom_attributes FROM contacts WHERE id = :cid;"),
                         {"cid": conv.contact_id},
                     )
                     c_data = q_contact.mappings().first()
+
+                    # 1. Facebook Messenger Dispatch
+                    page_token = creds.get("page_access_token")
                     if c_data and c_data["custom_attributes"] and "psid" in c_data["custom_attributes"] and page_token:
                         recipient_psid = c_data["custom_attributes"]["psid"]
                         asyncio.create_task(send_facebook_message(page_token, recipient_psid, data.text_content))
+
+                    # 2. WhatsApp Cloud API Dispatch
+                    wa_token = creds.get("access_token")
+                    phone_number_id = creds.get("phone_number_id", ch_data["account_identifier"])
+                    recipient_wa = None
+                    if c_data:
+                        if c_data["custom_attributes"] and "wa_id" in c_data["custom_attributes"]:
+                            recipient_wa = c_data["custom_attributes"]["wa_id"]
+                        elif c_data["phone_number"]:
+                            recipient_wa = c_data["phone_number"].replace("+", "").strip()
+
+                    if wa_token and phone_number_id and recipient_wa:
+                        asyncio.create_task(send_whatsapp_message(wa_token, phone_number_id, recipient_wa, data.text_content))
             except Exception as e:
                 pass
 

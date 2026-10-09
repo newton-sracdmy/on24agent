@@ -1,118 +1,204 @@
-"""Facebook Messenger Channel Service for Meta Graph API integration.
+"""WhatsApp Channel Service for Meta WhatsApp Cloud API integration.
 
 Handles:
-- Processing inbound webhook events from Meta Messenger
+- Processing inbound webhook events from Meta WhatsApp Cloud API
 - Syncing contacts and conversations to PostgreSQL
 - Generating AI Agent responses with RAG knowledge grounding
-- Dispatching outbound messages via Meta Graph API
+- Dispatching outbound messages via Meta WhatsApp Cloud API
+- Deducting credits in the ledger
 """
 
 import json
 import logging
 from typing import Any, Dict, Optional
-from uuid import UUID
 import httpx
-from sqlalchemy import select, text
-from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy import text
 
 from app.database import admin_session_factory
 from app.security import decrypt_secret
 
-logger = logging.getLogger("facebook_messenger")
+logger = logging.getLogger("whatsapp_service")
 META_GRAPH_API_VERSION = "v19.0"
 
 
-async def send_facebook_message(page_access_token: str, recipient_psid: str, text_content: str) -> bool:
-    """Send an outbound text message to a Facebook user via Meta Graph API."""
-    url = f"https://graph.facebook.com/{META_GRAPH_API_VERSION}/me/messages"
-    params = {"access_token": page_access_token}
+async def send_whatsapp_message(
+    access_token: str, phone_number_id: str, recipient_wa_id: str, text_content: str
+) -> bool:
+    """Send an outbound text message to a WhatsApp user via Meta WhatsApp Cloud API."""
+    url = f"https://graph.facebook.com/{META_GRAPH_API_VERSION}/{phone_number_id}/messages"
+    headers = {
+        "Authorization": f"Bearer {access_token}",
+        "Content-Type": "application/json",
+    }
     payload = {
-        "recipient": {"id": recipient_psid},
-        "message": {"text": text_content},
-        "messaging_type": "RESPONSE",
+        "messaging_product": "whatsapp",
+        "recipient_type": "individual",
+        "to": recipient_wa_id,
+        "type": "text",
+        "text": {"preview_url": False, "body": text_content},
     }
 
     async with httpx.AsyncClient(timeout=15.0) as client:
         try:
-            resp = await client.post(url, params=params, json=payload)
-            if resp.status_code == 200:
-                logger.info(f"Successfully dispatched Facebook Messenger reply to PSID {recipient_psid}")
+            resp = await client.post(url, headers=headers, json=payload)
+            if resp.status_code in (200, 201):
+                logger.info(f"Successfully dispatched WhatsApp reply to {recipient_wa_id}")
                 return True
             else:
-                logger.error(f"Meta Graph API error ({resp.status_code}): {resp.text}")
+                logger.error(f"WhatsApp Cloud API error ({resp.status_code}): {resp.text}")
                 return False
         except Exception as e:
-            logger.error(f"Exception sending Facebook message: {e}")
+            logger.error(f"Exception sending WhatsApp message: {e}")
             return False
 
 
-async def handle_inbound_facebook_event(payload: Dict[str, Any]) -> None:
-    """Process an incoming webhook payload from Meta Messenger."""
-    if payload.get("object") != "page":
+async def mark_whatsapp_message_read(
+    access_token: str, phone_number_id: str, message_id: str
+) -> None:
+    """Mark an inbound WhatsApp message as read to display double-blue checkmarks."""
+    url = f"https://graph.facebook.com/{META_GRAPH_API_VERSION}/{phone_number_id}/messages"
+    headers = {
+        "Authorization": f"Bearer {access_token}",
+        "Content-Type": "application/json",
+    }
+    payload = {
+        "messaging_product": "whatsapp",
+        "status": "read",
+        "message_id": message_id,
+    }
+
+    async with httpx.AsyncClient(timeout=10.0) as client:
+        try:
+            await client.post(url, headers=headers, json=payload)
+        except Exception as e:
+            logger.warning(f"Failed to mark WhatsApp message {message_id} as read: {e}")
+
+
+async def handle_inbound_whatsapp_event(payload: Dict[str, Any]) -> None:
+    """Process an incoming webhook payload from Meta WhatsApp Cloud API."""
+    if payload.get("object") != "whatsapp_business_account":
         return
 
     entries = payload.get("entry", [])
     for entry in entries:
-        page_id = str(entry.get("id"))
-        messaging_events = entry.get("messaging", [])
-
-        for event in messaging_events:
-            sender_id = event.get("sender", {}).get("id")
-            recipient_id = event.get("recipient", {}).get("id")
-            message_obj = event.get("message")
-
-            # Ignore echo messages sent by the page itself or delivery receipts
-            if not message_obj or message_obj.get("is_echo") or not sender_id:
+        changes = entry.get("changes", [])
+        for change in changes:
+            field = change.get("field")
+            if field != "messages":
                 continue
 
-            user_text = message_obj.get("text")
-            if not user_text:
-                continue
+            value = change.get("value", {})
+            metadata = value.get("metadata", {})
+            phone_number_id = str(metadata.get("phone_number_id", ""))
+            contacts = value.get("contacts", [])
+            messages = value.get("messages", [])
 
-            logger.info(f"Received Facebook message from PSID {sender_id} to Page {page_id}: '{user_text}'")
+            sender_name = "WhatsApp User"
+            if contacts and isinstance(contacts, list):
+                profile = contacts[0].get("profile", {})
+                if profile.get("name"):
+                    sender_name = profile.get("name")
 
-            # Process in database
-            await _process_facebook_message(page_id, sender_id, user_text)
+            for msg_item in messages:
+                msg_type = msg_item.get("type")
+                sender_wa_id = msg_item.get("from")
+                msg_id = msg_item.get("id")
+
+                user_text = ""
+                if msg_type == "text":
+                    user_text = msg_item.get("text", {}).get("body", "")
+                elif msg_type == "interactive":
+                    interactive = msg_item.get("interactive", {})
+                    user_text = (
+                        interactive.get("button_reply", {}).get("title")
+                        or interactive.get("list_reply", {}).get("title")
+                        or "Interactive Response"
+                    )
+                else:
+                    user_text = f"[{msg_type.upper()} message received]"
+
+                if not sender_wa_id or not user_text:
+                    continue
+
+                logger.info(
+                    f"Received WhatsApp message from {sender_wa_id} ({sender_name}) to Phone Number ID {phone_number_id}: '{user_text}'"
+                )
+
+                await _process_whatsapp_message(
+                    phone_number_id=phone_number_id,
+                    sender_wa_id=sender_wa_id,
+                    sender_name=sender_name,
+                    user_text=user_text,
+                    msg_id=msg_id,
+                )
 
 
-async def _process_facebook_message(page_id: str, sender_psid: str, user_text: str) -> None:
+async def _process_whatsapp_message(
+    phone_number_id: str,
+    sender_wa_id: str,
+    sender_name: str,
+    user_text: str,
+    msg_id: Optional[str] = None,
+) -> None:
     async with admin_session_factory() as session:
-        # 1. Find Channel Account by page_id
+        # 1. Find Channel Account by phone_number_id
         q_channel = await session.execute(
-            text("SELECT id, organization_id, encrypted_credentials FROM channel_accounts WHERE account_identifier = :page_id AND is_deleted = false LIMIT 1;"),
-            {"page_id": page_id},
+            text(
+                """
+                SELECT id, organization_id, encrypted_credentials 
+                FROM channel_accounts 
+                WHERE account_identifier = :phone_number_id AND is_deleted = false 
+                LIMIT 1;
+                """
+            ),
+            {"phone_number_id": phone_number_id},
         )
         ch_row = q_channel.mappings().first()
         if not ch_row:
-            logger.warning(f"No active channel account found for Facebook Page ID {page_id}")
+            logger.warning(f"No active channel account found for WhatsApp Phone Number ID {phone_number_id}")
             return
 
         channel_account_id = ch_row["id"]
         org_id = ch_row["organization_id"]
 
-        # Decrypt Page Access Token
+        # Decrypt Access Token
         creds_json = decrypt_secret(ch_row["encrypted_credentials"])
-        page_access_token = json.loads(creds_json).get("page_access_token", "") if creds_json else ""
-        if not page_access_token:
+        access_token = ""
+        if creds_json:
+            try:
+                creds_dict = json.loads(creds_json)
+                access_token = creds_dict.get("access_token", "")
+            except Exception:
+                pass
+
+        if not access_token:
             from app.config import settings
-            page_access_token = settings.FB_PAGE_ACCESS_TOKEN or ""
+            access_token = settings.META_WHATSAPP_API_TOKEN or ""
 
         # Set RLS Context
         await session.execute(text(f"SELECT set_config('app.current_org_id', '{org_id}', true);"))
 
-        # 2. Find or Create Contact by PSID
+        # Mark message as read on WhatsApp
+        if msg_id and access_token:
+            await mark_whatsapp_message_read(access_token, phone_number_id, msg_id)
+
+        # 2. Find or Create Contact by WhatsApp Phone Number (wa_id)
         q_contact = await session.execute(
             text(
                 """
                 SELECT id FROM contacts 
                 WHERE organization_id = :org_id 
-                  AND custom_attributes->>'psid' = :psid 
+                  AND (phone_number = :wa_phone OR custom_attributes->>'wa_id' = :wa_id)
                 LIMIT 1;
                 """
             ),
-            {"org_id": org_id, "psid": sender_psid},
+            {"org_id": org_id, "wa_phone": f"+{sender_wa_id}", "wa_id": sender_wa_id},
         )
         contact_row = q_contact.mappings().first()
+
+        name_parts = sender_name.split(" ", 1)
+        first_name = name_parts[0]
+        last_name = name_parts[1] if len(name_parts) > 1 else ""
 
         if contact_row:
             contact_id = contact_row["id"]
@@ -120,15 +206,17 @@ async def _process_facebook_message(page_id: str, sender_psid: str, user_text: s
             q_ins_contact = await session.execute(
                 text(
                     """
-                    INSERT INTO contacts (id, organization_id, first_name, last_name, lifecycle_stage, custom_attributes, created_at, updated_at)
-                    VALUES (gen_random_uuid(), :org_id, 'Facebook Member', :psid, 'customer', CAST(:attrs AS jsonb), CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+                    INSERT INTO contacts (id, organization_id, first_name, last_name, phone_number, lifecycle_stage, custom_attributes, created_at, updated_at)
+                    VALUES (gen_random_uuid(), :org_id, :first_name, :last_name, :phone, 'customer', CAST(:attrs AS jsonb), CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
                     RETURNING id;
                     """
                 ),
                 {
                     "org_id": org_id,
-                    "psid": sender_psid[-4:],
-                    "attrs": json.dumps({"psid": sender_psid, "source": "facebook_messenger"}),
+                    "first_name": first_name,
+                    "last_name": last_name,
+                    "phone": f"+{sender_wa_id}",
+                    "attrs": json.dumps({"wa_id": sender_wa_id, "source": "whatsapp_cloud_api"}),
                 },
             )
             contact_id = q_ins_contact.scalar_one()
@@ -176,7 +264,7 @@ async def _process_facebook_message(page_id: str, sender_psid: str, user_text: s
                     "org_id": org_id,
                     "cid": contact_id,
                     "chid": channel_account_id,
-                    "subject": f"Messenger Chat ({user_text[:40]}...)",
+                    "subject": f"WhatsApp: {sender_name} (+{sender_wa_id})",
                 },
             )
             conversation_id = q_ins_conv.scalar_one()
@@ -226,17 +314,17 @@ async def _process_facebook_message(page_id: str, sender_psid: str, user_text: s
             if "rule" in lower_q or "guideline" in lower_q or "নিয়ম" in lower_q:
                 ai_reply = f"Welcome to TechVibe Members Club! Our community guidelines:\n{best_chunk}"
             else:
-                ai_reply = f"According to TechVibe official guidelines:\n\n{best_chunk}\n\nFeel free to ask if you have more questions!"
+                ai_reply = f"According to TechVibe official guidelines:\n\n{best_chunk}\n\nLet us know if you need more details!"
         elif "join" in lower_q or "group" in lower_q or "মেম্বার" in lower_q or "যুক্ত" in lower_q:
             ai_reply = "Welcome to TechVibe! You can participate in all member discussions right here and inside our Facebook Group. Feel free to ask any tech or development questions anytime!"
         elif "event" in lower_q or "session" in lower_q or "সময়" in lower_q or "friday" in lower_q:
             ai_reply = "Our weekly live AI & tech sessions are hosted every Friday at 8:00 PM (GMT+6) in our community group. Don't miss it!"
         else:
-            ai_reply = f"Hello from TechVibe AI Assistant! Thanks for reaching out. We are glad to have you in TechVibe Members Club. How can I assist your tech journey today?"
+            ai_reply = f"Hello {sender_name}! 👋 Thanks for messaging TechVibe Members Club. I am your 24/7 AI Operations Specialist. How can I assist your tech journey today?"
 
-        # 6. Dispatch AI Reply via Meta Graph API
-        if page_access_token:
-            sent = await send_facebook_message(page_access_token, sender_psid, ai_reply)
+        # 6. Dispatch Outbound AI Reply via Meta WhatsApp Cloud API
+        if access_token and phone_number_id:
+            sent = await send_whatsapp_message(access_token, phone_number_id, sender_wa_id, ai_reply)
         else:
             sent = False
 
@@ -267,11 +355,11 @@ async def _process_facebook_message(page_id: str, sender_psid: str, user_text: s
             text(
                 """
                 INSERT INTO credit_ledger (id, organization_id, transaction_type, amount, balance_after, description, created_at, updated_at)
-                VALUES (gen_random_uuid(), :org_id, 'usage_deduction', -1.0, (SELECT balance_credits FROM credit_balances WHERE organization_id = :org_id), 'Messenger AI Turn Inference', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP);
+                VALUES (gen_random_uuid(), :org_id, 'usage_deduction', -1.0, (SELECT balance_credits FROM credit_balances WHERE organization_id = :org_id), 'WhatsApp AI Turn Inference', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP);
                 """
             ),
             {"org_id": org_id},
         )
 
         await session.commit()
-        logger.info(f"Processed Messenger interaction for TechVibe. AI reply sent: '{ai_reply}'")
+        logger.info(f"Processed WhatsApp interaction for TechVibe. AI reply sent: '{ai_reply}'")
