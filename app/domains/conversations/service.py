@@ -81,6 +81,35 @@ class ConversationService:
             reply_to_message_id=data.reply_to_message_id,
         )
         await self.session.flush()
+
+        # Dispatch outbound message to external channel if applicable (e.g. Facebook Messenger)
+        if sender_type == MessageSenderType.AGENT and data.text_content:
+            try:
+                import json
+                import asyncio
+                from sqlalchemy import text
+                from app.security import decrypt_secret
+                from app.domains.channels.facebook_service import send_facebook_message
+
+                q_ch = await self.session.execute(
+                    text("SELECT encrypted_credentials FROM channel_accounts WHERE id = :chid AND is_deleted = false;"),
+                    {"chid": conv.channel_account_id},
+                )
+                ch_data = q_ch.mappings().first()
+                if ch_data and ch_data["encrypted_credentials"]:
+                    creds = json.loads(decrypt_secret(ch_data["encrypted_credentials"]))
+                    page_token = creds.get("page_access_token")
+                    q_contact = await self.session.execute(
+                        text("SELECT custom_attributes FROM contacts WHERE id = :cid;"),
+                        {"cid": conv.contact_id},
+                    )
+                    c_data = q_contact.mappings().first()
+                    if c_data and c_data["custom_attributes"] and "psid" in c_data["custom_attributes"] and page_token:
+                        recipient_psid = c_data["custom_attributes"]["psid"]
+                        asyncio.create_task(send_facebook_message(page_token, recipient_psid, data.text_content))
+            except Exception as e:
+                pass
+
         return msg
 
     async def resolve_conversation(

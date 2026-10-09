@@ -34,11 +34,14 @@
     <div class="flex items-center gap-4">
       <div class="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-slate-800/80 border border-slate-700/60 text-xs">
         <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
-        <span class="text-slate-300 font-medium" id="currentWorkspaceName">Acme Corp Operations</span>
+        <select id="workspaceSelect" onchange="switchWorkspace(this.value)" class="bg-transparent text-slate-200 font-semibold focus:outline-none cursor-pointer">
+          <option value="00000000-0000-0000-0000-000000000200" class="bg-slate-900 text-white" selected>TechVibe Members Club (Facebook)</option>
+          <option value="00000000-0000-0000-0000-000000000001" class="bg-slate-900 text-white">Acme Corp Global (WhatsApp)</option>
+        </select>
       </div>
       <div class="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-emerald-950/60 border border-emerald-800/40 text-xs text-emerald-300 font-semibold shadow-inner">
         <i data-lucide="coins" class="w-4 h-4 text-emerald-400"></i>
-        <span id="creditsBalanceDisplay">1,000.00 Credits</span>
+        <span id="creditsBalanceDisplay">10,000.00 Credits</span>
       </div>
     </div>
 
@@ -537,23 +540,34 @@
   <script>
     lucide.createIcons();
 
+    let currentOrgId = "00000000-0000-0000-0000-000000000200";
     let authToken = null;
     let activeConvId = null;
     let conversationsCache = [];
     let contactsCache = [];
 
+    async function switchWorkspace(orgId) {
+      currentOrgId = orgId;
+      activeConvId = null;
+      await initApp();
+    }
+
     async function initApp() {
       try {
-        // 1. Authenticate with backend API
+        // 1. Authenticate with backend API for selected workspace
         const authRes = await fetch('/api/v1/auth/login', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ email: 'admin@gabster.ai', password: 'Password123!' })
+          body: JSON.stringify({ 
+            email: 'admin@gabster.ai', 
+            password: 'Password123!',
+            organization_id: currentOrgId
+          })
         });
         const authData = await authRes.json();
         if (authData.success && authData.data) {
           authToken = authData.data.access_token;
-          console.log("Authenticated successfully with Gabster AI API.");
+          console.log("Authenticated successfully with Gabster AI API for org:", currentOrgId);
           
           // 2. Fetch live Credit Balance
           fetchLiveCredits();

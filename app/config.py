@@ -161,6 +161,8 @@ class Settings(BaseSettings):
     META_WHATSAPP_PHONE_NUMBER_ID: Optional[str] = None
     META_WHATSAPP_WABA_ID: Optional[str] = None
     META_WEBHOOK_VERIFY_TOKEN: str = "gabster_meta_verify_token_secure_string"
+    FB_PAGE_ID: Optional[str] = None
+    FB_PAGE_ACCESS_TOKEN: Optional[str] = None
     TELEGRAM_BOT_TOKEN: Optional[str] = None
     TELEGRAM_WEBHOOK_SECRET: Optional[str] = None
 
