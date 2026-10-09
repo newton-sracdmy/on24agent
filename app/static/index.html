@@ -232,7 +232,7 @@
               <button onclick="insertCanned('sla_info')" class="text-[11px] px-2 py-0.5 rounded bg-slate-800 text-slate-300 hover:bg-slate-700 border border-slate-700">/sla_info</button>
             </div>
             <div class="flex items-center gap-3">
-              <input type="text" id="chatInput" placeholder="Type a message or '/' for canned response..." class="flex-1 bg-slate-900 border border-slate-700 rounded-xl px-4 py-2.5 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-emerald-500 transition">
+              <input type="text" id="chatInput" onkeydown="if(event.key === 'Enter') sendMessage()" placeholder="Type a message or '/' for canned response..." class="flex-1 bg-slate-900 border border-slate-700 rounded-xl px-4 py-2.5 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-emerald-500 transition">
               <button onclick="sendMessage()" class="px-5 py-2.5 rounded-xl bg-emerald-500 hover:bg-emerald-400 font-bold text-slate-950 text-sm flex items-center gap-1.5 transition">
                 <span>Send</span>
                 <i data-lucide="send" class="w-4 h-4"></i>

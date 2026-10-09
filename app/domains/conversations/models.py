@@ -283,10 +283,10 @@ class Message(Base, UUIDPrimaryKeyMixin, TimestampMixin, TenantMixin):
 
     conversation: Mapped["Conversation"] = relationship("Conversation", back_populates="messages")
     attachments: Mapped[List["MessageAttachment"]] = relationship(
-        "MessageAttachment", back_populates="message", cascade="all, delete-orphan"
+        "MessageAttachment", back_populates="message", cascade="all, delete-orphan", lazy="selectin"
     )
     reactions: Mapped[List["MessageReaction"]] = relationship(
-        "MessageReaction", back_populates="message", cascade="all, delete-orphan"
+        "MessageReaction", back_populates="message", cascade="all, delete-orphan", lazy="selectin"
     )
 
     __table_args__ = (
