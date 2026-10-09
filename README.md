@@ -101,10 +101,94 @@ project/
    ```
    The API will be available at `http://localhost:8000/api/v1` and interactive Swagger docs at `http://localhost:8000/docs`.
 
-7. **Start Celery worker:**
+## 🐳 Running with Docker
+
+You can run the Gabster AI platform using Docker in two different ways:
+
+---
+
+### Option 1: Full-Stack Docker Deployment
+Run the complete stack (FastAPI Backend, PostgreSQL with pgvector, Redis, and Celery Worker) together in Docker containers:
+
+1. **Build and start all services in detached mode:**
    ```bash
-   make worker
+   docker compose -f docker/docker-compose.yml up -d --build
    ```
+
+2. **Apply database migrations:**
+   ```bash
+   docker compose -f docker/docker-compose.yml exec api alembic upgrade head
+   ```
+
+3. **Stream live logs:**
+   ```bash
+   docker compose -f docker/docker-compose.yml logs -f
+   # Or stream logs for the API service only:
+   docker compose -f docker/docker-compose.yml logs -f api
+   ```
+
+4. **Check status of running containers:**
+   ```bash
+   docker compose -f docker/docker-compose.yml ps
+   ```
+
+5. **Stop all services:**
+   ```bash
+   docker compose -f docker/docker-compose.yml down
+   ```
+
+---
+
+### Option 2: Hybrid / Developer Mode (Databases in Docker + Server in Local Terminal)
+Recommended for active development with instant hot-reloading on code edits:
+
+1. **Start only PostgreSQL (pgvector) and Redis in Docker:**
+   ```bash
+   make db-up
+   # Or manually:
+   docker compose -f docker/docker-compose.dev.yml up -d
+   ```
+
+2. **Start the FastAPI server in your terminal with auto-reload:**
+   ```bash
+   .venv/bin/uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
+   ```
+
+3. **Stop background database containers when finished:**
+   ```bash
+   make db-down
+   # Or manually:
+   docker compose -f docker/docker-compose.dev.yml down
+   ```
+
+---
+
+## 🌐 Live Meta WhatsApp & Facebook Messenger Webhook Tunnel (Ngrok)
+
+To receive real-time incoming webhooks from Meta Cloud API (WhatsApp) and Facebook Messenger on your local machine, keep an Ngrok tunnel active:
+
+```bash
+ngrok http --domain=salad-clapper-dowry.ngrok-free.dev 8000
+```
+
+> **Webhook URLs:**
+> - WhatsApp Webhook: `https://salad-clapper-dowry.ngrok-free.dev/webhooks/whatsapp`
+> - Messenger Webhook: `https://salad-clapper-dowry.ngrok-free.dev/webhooks/facebook`
+
+---
+
+## 🖥️ Dashboard & Credentials
+
+Once the server is running, open your browser and navigate to:
+- **Local Application:** [http://localhost:8000](http://localhost:8000)
+- **Public URL (via Ngrok):** `https://salad-clapper-dowry.ngrok-free.dev`
+- **Interactive Swagger API Docs:** [http://localhost:8000/docs](http://localhost:8000/docs)
+
+**Default Admin Credentials:**
+- **Email:** `admin@gabster.ai`
+- **Password:** `Password123!`
+
+---
 
 ## 🧪 Testing
 
@@ -115,4 +199,3 @@ make test
 # Run tenant isolation security tests
 make test-security
 ```
-# on24agent
