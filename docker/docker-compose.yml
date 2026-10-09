@@ -3,40 +3,64 @@ services:
     build:
       context: ..
       dockerfile: docker/Dockerfile
+      network: host
+    image: gabster_app:latest
     container_name: gabster_api
     restart: unless-stopped
-    ports:
-      - "8000:8000"
+    network_mode: host
+    env_file:
+      - ../.env
     environment:
       - ENVIRONMENT=production
-      - POSTGRES_SERVER=postgres
-      - REDIS_HOST=redis
+      - SERVER_HOST=0.0.0.0
+      - SERVER_PORT=8000
+      - POSTGRES_SERVER=localhost
+      - POSTGRES_PORT=5433
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=secure_postgres_password
+      - DATABASE_URL=postgresql+asyncpg://postgres:secure_postgres_password@localhost:5433/gabster_ai
+      - DATABASE_ADMIN_URL=postgresql+asyncpg://postgres:secure_postgres_password@localhost:5433/gabster_ai
+      - REDIS_HOST=localhost
+      - REDIS_PORT=6379
+      - REDIS_URL=redis://localhost:6379/0
+      - CELERY_BROKER_URL=redis://localhost:6379/1
+      - CELERY_RESULT_BACKEND=redis://localhost:6379/2
     depends_on:
       postgres:
         condition: service_healthy
       redis:
         condition: service_healthy
-    networks:
-      - gabster_network
 
   worker:
     build:
       context: ..
       dockerfile: docker/Dockerfile
+      network: host
+    image: gabster_app:latest
     container_name: gabster_worker
     restart: unless-stopped
+    network_mode: host
     command: ["celery", "-A", "app.workers.celery_app", "worker", "--loglevel=INFO", "-Q", "ai,ingestion,campaigns,default"]
+    env_file:
+      - ../.env
     environment:
       - ENVIRONMENT=production
-      - POSTGRES_SERVER=postgres
-      - REDIS_HOST=redis
+      - POSTGRES_SERVER=localhost
+      - POSTGRES_PORT=5433
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=secure_postgres_password
+      - DATABASE_URL=postgresql+asyncpg://postgres:secure_postgres_password@localhost:5433/gabster_ai
+      - DATABASE_ADMIN_URL=postgresql+asyncpg://postgres:secure_postgres_password@localhost:5433/gabster_ai
+      - REDIS_HOST=localhost
+      - REDIS_PORT=6379
+      - REDIS_URL=redis://localhost:6379/0
+      - CELERY_BROKER_URL=redis://localhost:6379/1
+      - CELERY_RESULT_BACKEND=redis://localhost:6379/2
     depends_on:
       postgres:
         condition: service_healthy
       redis:
         condition: service_healthy
-    networks:
-      - gabster_network
 
   postgres:
     image: pgvector/pgvector:pg16
