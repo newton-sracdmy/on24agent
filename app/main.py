@@ -89,6 +89,16 @@ def create_application() -> FastAPI:
             return {"status": "unready", "database": "disconnected"}
         return {"status": "ready"}
 
+    @app.get("/privacy", include_in_schema=False)
+    async def privacy_policy():
+        from fastapi.responses import HTMLResponse
+        return HTMLResponse("<html><head><title>Privacy Policy</title></head><body><h1>Privacy Policy</h1><p>TechVibe Members Club and Gabster AI respect your privacy and only process messaging interactions for automated customer support.</p></body></html>")
+
+    @app.get("/terms", include_in_schema=False)
+    async def terms_of_service():
+        from fastapi.responses import HTMLResponse
+        return HTMLResponse("<html><head><title>Terms of Service</title></head><body><h1>Terms of Service</h1><p>Standard terms of service for TechVibe Members Club messaging automation.</p></body></html>")
+
     # Include Versioned API Routes & Webhook Ingress
     app.include_router(api_v1_router, prefix=settings.API_V1_STR)
     app.include_router(webhooks_router, prefix="/webhooks")

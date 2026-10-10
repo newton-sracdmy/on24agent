@@ -21,9 +21,20 @@ logger = logging.getLogger("instagram_messaging")
 META_GRAPH_API_VERSION = "v19.0"
 
 
-async def send_instagram_message(access_token: str, recipient_igsid: str, text_content: str) -> bool:
+async def send_instagram_message(
+    access_token: str,
+    recipient_igsid: str,
+    text_content: str,
+    sender_account_id: Optional[str] = None,
+) -> bool:
     """Send an outbound text message to an Instagram user via Meta Graph API."""
-    url = f"https://graph.facebook.com/{META_GRAPH_API_VERSION}/me/messages"
+    from app.config import settings
+
+    if access_token.startswith("IGAA") or access_token.startswith("IGQ"):
+        url = f"https://graph.instagram.com/{META_GRAPH_API_VERSION}/me/messages"
+    else:
+        target_id = sender_account_id or settings.FB_PAGE_ID or "me"
+        url = f"https://graph.facebook.com/{META_GRAPH_API_VERSION}/{target_id}/messages"
     params = {"access_token": access_token}
     payload = {
         "recipient": {"id": recipient_igsid},
@@ -46,7 +57,8 @@ async def send_instagram_message(access_token: str, recipient_igsid: str, text_c
 
 async def handle_inbound_instagram_event(payload: Dict[str, Any]) -> None:
     """Process an incoming webhook payload from Meta Instagram Messaging."""
-    if payload.get("object") != "instagram":
+    logger.info(f"Incoming Instagram webhook payload: {json.dumps(payload)}")
+    if payload.get("object") not in ("instagram", "page"):
         return
 
     entries = payload.get("entry", [])
@@ -95,6 +107,13 @@ async def _process_instagram_message(account_id: str, sender_igsid: str, user_te
         channel_account_id = ch_row["id"]
         org_id = ch_row["organization_id"]
 
+        if account_id and ch_row.get("account_identifier") == "instagram_default":
+            await session.execute(
+                text("UPDATE channel_accounts SET account_identifier = :acc_id WHERE id = :id;"),
+                {"acc_id": account_id, "id": channel_account_id},
+            )
+            await session.commit()
+
         # Decrypt Access Token
         creds_json = decrypt_secret(ch_row["encrypted_credentials"]) if ch_row["encrypted_credentials"] else ""
         access_token = ""
@@ -107,7 +126,7 @@ async def _process_instagram_message(account_id: str, sender_igsid: str, user_te
 
         if not access_token:
             from app.config import settings
-            access_token = settings.META_WHATSAPP_API_TOKEN or settings.FB_PAGE_ACCESS_TOKEN or ""
+            access_token = settings.INSTAGRAM_ACCESS_TOKEN or settings.META_WHATSAPP_API_TOKEN or settings.FB_PAGE_ACCESS_TOKEN or ""
 
         # Set RLS Context
         await session.execute(text(f"SELECT set_config('app.current_org_id', '{org_id}', true);"))
@@ -271,7 +290,7 @@ async def _process_instagram_message(account_id: str, sender_igsid: str, user_te
         # 6. Dispatch AI Reply via Meta Graph API
         sent = False
         if access_token:
-            sent = await send_instagram_message(access_token, sender_igsid, ai_reply)
+            sent = await send_instagram_message(access_token, sender_igsid, ai_reply, sender_account_id=account_id)
 
         # 7. Save Outbound Bot Message in Database
         await session.execute(

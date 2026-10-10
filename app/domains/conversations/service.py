@@ -162,7 +162,7 @@ class ConversationService:
                     # 3. Instagram Direct Message Dispatch
                     elif channel_type == "instagram" or "igsid" in custom_attrs:
                         from app.domains.channels.instagram_service import send_instagram_message
-                        ig_token = creds.get("access_token") or getattr(settings, "META_WHATSAPP_API_TOKEN", None) or getattr(settings, "FB_PAGE_ACCESS_TOKEN", None)
+                        ig_token = creds.get("access_token") or getattr(settings, "INSTAGRAM_ACCESS_TOKEN", None) or getattr(settings, "META_WHATSAPP_API_TOKEN", None) or getattr(settings, "FB_PAGE_ACCESS_TOKEN", None)
                         recipient_igsid = custom_attrs.get("igsid")
                         if ig_token and recipient_igsid:
                             logger.info(f"Dispatching outbound Instagram DM to IGSID {recipient_igsid}")
