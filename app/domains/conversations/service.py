@@ -158,6 +158,17 @@ class ConversationService:
                             sent = await send_whatsapp_message(wa_token, phone_number_id, recipient_wa, data.text_content)
                             if sent:
                                 msg.delivery_status = MessageDeliveryStatus.DELIVERED.value
+
+                    # 3. Instagram Direct Message Dispatch
+                    elif channel_type == "instagram" or "igsid" in custom_attrs:
+                        from app.domains.channels.instagram_service import send_instagram_message
+                        ig_token = creds.get("access_token") or getattr(settings, "META_WHATSAPP_API_TOKEN", None) or getattr(settings, "FB_PAGE_ACCESS_TOKEN", None)
+                        recipient_igsid = custom_attrs.get("igsid")
+                        if ig_token and recipient_igsid:
+                            logger.info(f"Dispatching outbound Instagram DM to IGSID {recipient_igsid}")
+                            sent = await send_instagram_message(ig_token, recipient_igsid, data.text_content)
+                            if sent:
+                                msg.delivery_status = MessageDeliveryStatus.DELIVERED.value
             except Exception as e:
                 logger.exception(f"Error dispatching outbound message to external channel: {e}")
 

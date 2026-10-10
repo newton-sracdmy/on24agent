@@ -87,6 +87,42 @@ async def receive_facebook_webhook(request: Request) -> dict:
     return {"status": "EVENT_RECEIVED"}
 
 
+from app.domains.channels.instagram_service import handle_inbound_instagram_event
+
+
+@webhooks_router.get("/instagram")
+async def verify_instagram_webhook(
+    hub_mode: str = Query(alias="hub.mode"),
+    hub_verify_token: str = Query(alias="hub.verify_token"),
+    hub_challenge: str = Query(alias="hub.challenge"),
+) -> Response:
+    """Handles Meta Instagram Messaging webhook handshake verification."""
+    if hub_mode == "subscribe" and hub_verify_token == settings.META_WEBHOOK_VERIFY_TOKEN:
+        return PlainTextResponse(
+            content=str(hub_challenge),
+            status_code=200,
+            headers={
+                "Content-Type": "text/plain; charset=utf-8",
+                "Content-Encoding": "identity",
+            },
+        )
+    raise HTTPException(status_code=403, detail="Verification token mismatch")
+
+
+@webhooks_router.post("/instagram")
+async def receive_instagram_webhook(request: Request) -> dict:
+    """Receives asynchronous inbound direct messages from Instagram."""
+    try:
+        payload = await request.json()
+    except Exception:
+        payload = {}
+
+    if payload:
+        asyncio.create_task(handle_inbound_instagram_event(payload))
+
+    return {"status": "EVENT_RECEIVED"}
+
+
 @webhooks_router.post("/stripe")
 async def receive_stripe_webhook(
     request: Request,

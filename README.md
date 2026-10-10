@@ -163,9 +163,9 @@ Recommended for active development with instant hot-reloading on code edits:
 
 ---
 
-## 🌐 Live Meta WhatsApp & Facebook Messenger Webhook Tunnel (Ngrok)
+## 🌐 Live Meta WhatsApp, Facebook Messenger & Instagram Webhook Tunnel (Ngrok)
 
-To receive real-time incoming webhooks from Meta Cloud API (WhatsApp) and Facebook Messenger on your local machine, keep an Ngrok tunnel active:
+To receive real-time incoming webhooks from Meta Cloud API (WhatsApp), Facebook Messenger, and Instagram Direct on your local machine, keep an Ngrok tunnel active:
 
 ```bash
 ngrok http --domain=salad-clapper-dowry.ngrok-free.dev 8000
@@ -174,6 +174,7 @@ ngrok http --domain=salad-clapper-dowry.ngrok-free.dev 8000
 > **Webhook URLs:**
 > - WhatsApp Webhook: `https://salad-clapper-dowry.ngrok-free.dev/webhooks/whatsapp`
 > - Messenger Webhook: `https://salad-clapper-dowry.ngrok-free.dev/webhooks/facebook`
+> - Instagram Webhook: `https://salad-clapper-dowry.ngrok-free.dev/webhooks/instagram`
 
 ---
 
