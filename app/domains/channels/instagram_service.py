@@ -254,11 +254,8 @@ async def _process_instagram_message(account_id: str, sender_igsid: str, user_te
         )
         chat_hist = [dict(r) for r in q_hist.mappings().all()]
 
-        system_prompt = (
-            "You are the official 24/7 AI Community Operations Specialist for TechVibe Members Club on Instagram. "
-            "You assist members with community guidelines, VIP membership, events, bootcamps, and technical inquiries. "
-            "Be energetic, polite, concise, and helpful. Format cleanly with emojis and concise bullet points suitable for Instagram DMs."
-        )
+        from app.domains.agents.service import AgentService
+        system_prompt = await AgentService.get_active_system_prompt(session, org_id)
 
         from app.domains.ai.gemini_service import generate_gemini_response
         ai_reply = await generate_gemini_response(
@@ -286,6 +283,11 @@ async def _process_instagram_message(account_id: str, sender_igsid: str, user_te
                 ai_reply = f"Hey! 👋 Official TechVibe guidelines:\n\n{best_chunk}\n\nFeel free to ask if you need anything else!"
             else:
                 ai_reply = "Hey! 👋 Thanks for reaching out to TechVibe Members Club on Instagram. I am your 24/7 AI Specialist. How can I help you today?"
+                try:
+                    from app.domains.rag.service import RAGService
+                    await RAGService.record_knowledge_gap(session, org_id, user_text, channel="instagram")
+                except Exception as e:
+                    logger.warning(f"Failed to record knowledge gap: {e}")
 
         # 6. Dispatch AI Reply via Meta Graph API
         sent = False

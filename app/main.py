@@ -48,12 +48,25 @@ def create_application() -> FastAPI:
         title="Gabster AI - Enterprise Customer Operations API",
         description="Production-grade omnichannel AI customer operations SaaS platform.",
         version="1.0.0",
-        docs_url="/docs" if settings.ENVIRONMENT != "production" else None,
-        redoc_url="/redoc" if settings.ENVIRONMENT != "production" else None,
+        docs_url="/docs",
+        redoc_url="/redoc",
         openapi_url=f"{settings.API_V1_STR}/openapi.json",
         lifespan=lifespan,
         debug=settings.DEBUG,
     )
+
+    # Swagger / OpenAPI aliases and convenience redirects
+    @app.api_route("/swagger", methods=["GET", "HEAD"], include_in_schema=False)
+    @app.api_route("/api/docs", methods=["GET", "HEAD"], include_in_schema=False)
+    @app.api_route("/api/v1/docs", methods=["GET", "HEAD"], include_in_schema=False)
+    async def swagger_ui_redirect():
+        from fastapi.responses import RedirectResponse
+        return RedirectResponse(url="/docs")
+
+    @app.api_route("/openapi.json", methods=["GET", "HEAD"], include_in_schema=False)
+    async def openapi_alias():
+        from fastapi.responses import RedirectResponse
+        return RedirectResponse(url=f"{settings.API_V1_STR}/openapi.json")
 
     # Core Middlewares (Executed in reverse order of addition)
     app.add_middleware(GlobalExceptionMiddleware)

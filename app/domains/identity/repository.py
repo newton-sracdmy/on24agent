@@ -67,6 +67,16 @@ class MembershipRepository(BaseRepository[Membership]):
         result = await self.session.execute(query)
         return list(result.scalars().all())
 
+    async def list_user_memberships(self, user_id: UUID) -> List[Membership]:
+        query = (
+            select(Membership)
+            .where(Membership.user_id == user_id, Membership.is_active == True)  # noqa: E712
+            .options(selectinload(Membership.organization), selectinload(Membership.role_obj))
+            .order_by(Membership.created_at.desc())
+        )
+        result = await self.session.execute(query)
+        return list(result.scalars().all())
+
 
 class RoleRepository(BaseRepository[Role]):
     def __init__(self, session: AsyncSession):
@@ -96,3 +106,11 @@ class SessionRepository(BaseRepository[Session]):
         )
         result = await self.session.execute(query)
         return result.scalars().first()
+
+    async def revoke_user_sessions(self, user_id: UUID) -> None:
+        from sqlalchemy import update
+        await self.session.execute(
+            update(Session)
+            .where(Session.user_id == user_id, Session.is_revoked == False)  # noqa: E712
+            .values(is_revoked=True)
+        )

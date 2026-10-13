@@ -1,4 +1,4 @@
-"""FastAPI router endpoints for AI Agents, Prompts, and Versions."""
+"""FastAPI router endpoints for AI Agents, Prompts, Instruction Studio, and Versions."""
 
 from typing import List
 from uuid import UUID
@@ -15,11 +15,81 @@ from app.domains.agents.schemas import (
     AgentConfigResponse,
     AgentVersionCreate,
     AgentVersionResponse,
+    InstructionBuilderPayload,
+    InstructionCompileResponse,
+    InstructionDeployRequest,
+    InstructionGenerateRequest,
+    InstructionStudioResponse,
+    InstructionTestRequest,
+    InstructionTestResponse,
 )
 from app.domains.agents.service import AgentService
 
 router = APIRouter()
 
+
+# ==============================================================================
+# Instruction Builder Studio Endpoints
+# ==============================================================================
+
+@router.get("/instructions", response_model=APIResponse[InstructionStudioResponse])
+async def get_instruction_studio(
+    user_context: AuthenticatedUserContext = Depends(require_tenant),
+    db: AsyncSession = Depends(get_db),
+) -> APIResponse[InstructionStudioResponse]:
+    """Retrieve the current instruction configuration, active agent, and preset templates."""
+    service = AgentService(db)
+    state = await service.get_builder_state(user_context.organization_id)
+    return APIResponse.ok(data=state)
+
+
+@router.post("/instructions/compile", response_model=APIResponse[InstructionCompileResponse])
+async def compile_instructions(
+    payload: InstructionBuilderPayload,
+    user_context: AuthenticatedUserContext = Depends(require_tenant),
+) -> APIResponse[InstructionCompileResponse]:
+    """Compile modular builder fields into a structured system prompt with token estimation."""
+    result = AgentService.compile_instruction_prompt(payload)
+    return APIResponse.ok(data=result)
+
+
+@router.post("/instructions/generate", response_model=APIResponse[InstructionBuilderPayload])
+async def generate_instructions(
+    payload: InstructionGenerateRequest,
+    user_context: AuthenticatedUserContext = Depends(require_tenant),
+) -> APIResponse[InstructionBuilderPayload]:
+    """Auto-generate an entire agent instruction set from a 1-sentence business description."""
+    draft = await AgentService.generate_ai_instructions(payload)
+    return APIResponse.ok(data=draft)
+
+
+@router.post("/instructions/deploy", status_code=status.HTTP_201_CREATED, response_model=APIResponse[AgentVersionResponse])
+async def deploy_instructions(
+    payload: InstructionDeployRequest,
+    user_context: AuthenticatedUserContext = Depends(require_tenant),
+    db: AsyncSession = Depends(get_db),
+) -> APIResponse[AgentVersionResponse]:
+    """Deploy and publish instructions to live WhatsApp, Messenger, and Instagram bots."""
+    service = AgentService(db)
+    published_version = await service.deploy_instructions(user_context.organization_id, payload)
+    return APIResponse.ok(data=AgentVersionResponse.model_validate(published_version))
+
+
+@router.post("/instructions/test", response_model=APIResponse[InstructionTestResponse])
+async def test_instructions(
+    payload: InstructionTestRequest,
+    user_context: AuthenticatedUserContext = Depends(require_tenant),
+    db: AsyncSession = Depends(get_db),
+) -> APIResponse[InstructionTestResponse]:
+    """Test response generation in an isolated sandbox with RAG grounding."""
+    service = AgentService(db)
+    result = await service.simulate_test_response(user_context.organization_id, payload)
+    return APIResponse.ok(data=result)
+
+
+# ==============================================================================
+# Agent Config & Version Management Endpoints
+# ==============================================================================
 
 @router.post("/", status_code=status.HTTP_201_CREATED, response_model=APIResponse[AgentConfigResponse])
 async def create_agent(

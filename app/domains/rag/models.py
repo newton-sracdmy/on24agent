@@ -202,3 +202,40 @@ class IngestionError(Base, UUIDPrimaryKeyMixin, TimestampMixin, TenantMixin):
     stack_trace: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
 
     ingestion_job: Mapped["IngestionJob"] = relationship("IngestionJob", back_populates="errors")
+
+
+class KnowledgeGap(Base, UUIDPrimaryKeyMixin, TimestampMixin, TenantMixin):
+    """Tracks customer questions that lacked sufficient knowledge base grounding."""
+    __tablename__ = "knowledge_gaps"
+
+    knowledge_base_id: Mapped[Optional[UUID]] = mapped_column(
+        PG_UUID(as_uuid=True),
+        ForeignKey("knowledge_bases.id", ondelete="SET NULL"),
+        nullable=True,
+        index=True,
+    )
+    question: Mapped[str] = mapped_column(Text, nullable=False)
+    normalized_query: Mapped[str] = mapped_column(String(500), nullable=False, index=True)
+    channel: Mapped[str] = mapped_column(String(50), default="whatsapp", nullable=False)
+    frequency_count: Mapped[int] = mapped_column(Integer, default=1, server_default=text("1"), nullable=False)
+    status: Mapped[str] = mapped_column(
+        String(50), default="unresolved", server_default=text("'unresolved'"), nullable=False, index=True
+    )  # unresolved, resolved, ignored
+    suggested_answer: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    resolved_document_id: Mapped[Optional[UUID]] = mapped_column(
+        PG_UUID(as_uuid=True),
+        ForeignKey("documents.id", ondelete="SET NULL"),
+        nullable=True,
+    )
+    last_asked_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=lambda: datetime.now(timezone.utc), nullable=False
+    )
+
+    knowledge_base: Mapped[Optional["KnowledgeBase"]] = relationship("KnowledgeBase")
+    resolved_document: Mapped[Optional["Document"]] = relationship("Document")
+
+    __table_args__ = (
+        Index("ix_knowledge_gaps_org_status", "organization_id", "status"),
+        UniqueConstraint("organization_id", "normalized_query", name="uq_org_gap_query"),
+    )
+

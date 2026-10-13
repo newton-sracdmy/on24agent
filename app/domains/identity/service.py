@@ -26,6 +26,7 @@ from app.domains.identity.repository import (
     UserRepository,
 )
 from app.domains.identity.schemas import TokenResponse, UserLogin, UserRegister
+from app.domains.usage.models import CreditBalance
 from app.exceptions import AuthenticationError, ResourceConflictError, ResourceNotFoundError
 from app.security import (
     create_access_token,
@@ -94,6 +95,16 @@ class IdentityService:
             agent_status=AgentOnlineStatus.ONLINE.value,
             is_active=True,
         )
+
+        # Provision 10,000 free starter credits for the new workspace
+        starter_balance = CreditBalance(
+            organization_id=org.id,
+            balance_credits=10000.0,
+            lifetime_granted_credits=10000.0,
+            lifetime_consumed_credits=0.0,
+        )
+        self.session.add(starter_balance)
+        await self.session.flush()
 
         # Create Session & Refresh Token
         session_expiry = datetime.now(timezone.utc) + timedelta(days=settings.REFRESH_TOKEN_EXPIRE_DAYS)
@@ -218,4 +229,9 @@ class IdentityService:
         if not membership:
             raise ResourceNotFoundError("Membership", f"{org_id}/{user_id}")
         membership.agent_status = status_val.value
+        await self.session.flush()
+
+    async def terminate_session(self, user_id: UUID) -> None:
+        """Revokes all active sessions for the user upon logout."""
+        await self.session_repo.revoke_user_sessions(user_id)
         await self.session.flush()

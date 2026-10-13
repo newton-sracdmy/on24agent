@@ -58,6 +58,17 @@ async def login(
     return APIResponse.ok(data=token_response)
 
 
+@router.post("/logout", response_model=APIResponse[dict])
+async def logout(
+    user_context: AuthenticatedUserContext = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+) -> APIResponse[dict]:
+    """Terminate active user session and revoke authorization."""
+    service = IdentityService(db)
+    await service.terminate_session(user_context.user_id)
+    return APIResponse.ok(data={"success": True, "message": "Successfully logged out"})
+
+
 @router.get("/me", response_model=APIResponse[dict])
 async def get_my_profile(
     user_context: AuthenticatedUserContext = Depends(get_current_user),
@@ -69,14 +80,26 @@ async def get_my_profile(
     if not user:
         return APIResponse.fail(code="USER_NOT_FOUND", message="User record not found")
 
+    memberships = await service.membership_repo.list_user_memberships(user.id)
+    orgs_list = []
+    for m in memberships:
+        if m.organization:
+            orgs_list.append({
+                "id": str(m.organization.id),
+                "name": m.organization.name,
+                "slug": m.organization.slug,
+                "role": m.role,
+            })
+
     return APIResponse.ok(
         data={
             "id": str(user.id),
             "email": user.email,
             "full_name": user.full_name,
-            "organization_id": str(user_context.organization_id) if user_context.organization_id else None,
+            "organization_id": str(user_context.organization_id) if user_context.organization_id else (orgs_list[0]["id"] if orgs_list else None),
             "role": user_context.role,
             "permissions": user_context.permissions,
+            "organizations": orgs_list,
         }
     )
 

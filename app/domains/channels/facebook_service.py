@@ -223,11 +223,8 @@ async def _process_facebook_message(page_id: str, sender_psid: str, user_text: s
         )
         chat_hist = [dict(r) for r in q_hist.mappings().all()]
 
-        system_prompt = (
-            "You are the official 24/7 AI Community Operations Specialist for TechVibe Members Club. "
-            "You assist community members with guidelines, VIP membership, events, bootcamps, and technical questions. "
-            "Be enthusiastic, polite, and clear. Format cleanly for Facebook Messenger with emojis and bullet points."
-        )
+        from app.domains.agents.service import AgentService
+        system_prompt = await AgentService.get_active_system_prompt(session, org_id)
 
         from app.domains.ai.gemini_service import generate_gemini_response
         ai_reply = await generate_gemini_response(
@@ -262,6 +259,11 @@ async def _process_facebook_message(page_id: str, sender_psid: str, user_text: s
                 ai_reply = "Our weekly live AI & tech sessions are hosted every Friday at 8:00 PM (GMT+6) in our community group. Don't miss it!"
             else:
                 ai_reply = f"Hello from TechVibe AI Assistant! Thanks for reaching out. We are glad to have you in TechVibe Members Club. How can I assist your tech journey today?"
+                try:
+                    from app.domains.rag.service import RAGService
+                    await RAGService.record_knowledge_gap(session, org_id, user_text, channel="messenger")
+                except Exception as e:
+                    logger.warning(f"Failed to record knowledge gap: {e}")
 
         # 6. Dispatch AI Reply via Meta Graph API
         if page_access_token:

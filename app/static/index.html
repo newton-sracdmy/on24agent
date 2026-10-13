@@ -50,14 +50,18 @@
       <a href="/docs" target="_blank" class="px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-xs font-semibold text-slate-200 transition flex items-center gap-1.5 border border-slate-700">
         <i data-lucide="book-open" class="w-4 h-4"></i> API Swagger Docs
       </a>
-      <div class="flex items-center gap-2 pl-3 border-l border-slate-800">
-        <div class="w-8 h-8 rounded-full bg-slate-800 border border-slate-700 flex items-center justify-center text-xs font-bold text-emerald-400">
-          OP
+      <div id="authenticatedUserArea" class="flex items-center gap-2 pl-3 border-l border-slate-800">
+        <div id="userAvatarInitials" class="w-8 h-8 rounded-full bg-emerald-500/10 border border-emerald-500/30 flex items-center justify-center text-xs font-bold text-emerald-400">
+          AD
         </div>
         <div class="text-left hidden sm:block">
-          <p class="text-xs font-semibold text-white">Staff Admin</p>
-          <p class="text-[10px] text-emerald-400 flex items-center gap-1">● Online</p>
+          <p id="userNameDisplay" class="text-xs font-semibold text-white">Staff Admin</p>
+          <p id="userEmailDisplay" class="text-[10px] text-emerald-400 flex items-center gap-1">● Online</p>
         </div>
+        <button onclick="handleLogout()" title="Sign Out of Gabster AI" class="ml-2 px-2.5 py-1.5 rounded-lg bg-slate-800 hover:bg-rose-500/20 hover:text-rose-400 text-slate-400 border border-slate-700/80 transition flex items-center gap-1.5 text-xs font-semibold">
+          <i data-lucide="log-out" class="w-3.5 h-3.5"></i>
+          <span class="hidden md:inline">Logout</span>
+        </button>
       </div>
     </div>
   </header>
@@ -98,6 +102,14 @@
         <button onclick="switchTab('billing')" id="nav-billing" class="w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-sm font-medium text-slate-400 hover:text-slate-100 hover:bg-slate-800/60 transition">
           <i data-lucide="credit-card" class="w-4 h-4"></i>
           <span>Credits & Billing</span>
+        </button>
+
+        <button onclick="switchTab('integrations')" id="nav-integrations" class="w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl text-sm font-medium text-slate-400 hover:text-slate-100 hover:bg-slate-800/60 transition">
+          <div class="flex items-center gap-3">
+            <i data-lucide="blocks" class="w-4 h-4"></i>
+            <span>Integrations & Apps</span>
+          </div>
+          <span class="text-[11px] px-2 py-0.5 rounded-full bg-slate-800 text-slate-300 font-bold" id="badgeIntegrationsCount">13</span>
         </button>
       </nav>
 
@@ -336,62 +348,422 @@
       <!-- ============================================================== -->
       <!-- TAB 3: AI AGENTS STUDIO -->
       <!-- ============================================================== -->
-      <section id="tab-agents" class="flex-1 p-8 overflow-y-auto hidden">
-        <div class="max-w-5xl mx-auto space-y-6">
-          <div class="flex items-center justify-between">
+      <!-- ============================================================== -->
+      <!-- TAB 3: AI AGENTS INSTRUCTION BUILDER STUDIO -->
+      <!-- ============================================================== -->
+      <section id="tab-agents" class="flex-1 p-6 md:p-8 overflow-y-auto hidden">
+        <div class="max-w-7xl mx-auto space-y-6">
+          
+          <!-- Top Header -->
+          <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 pb-4 border-b border-slate-800">
             <div>
-              <h2 class="text-xl font-bold text-white">AI Agents Studio</h2>
-              <p class="text-xs text-slate-400">Configure autonomous bots, LLM prompt engineering, and safety guardrails</p>
-            </div>
-            <button onclick="alert('Open agent creator modal')" class="px-4 py-2 bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold text-xs rounded-xl transition">
-              + New AI Agent
-            </button>
-          </div>
-
-          <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
-            <!-- Agent 1 -->
-            <div class="p-5 rounded-2xl border border-emerald-500/30 bg-slate-900/60 relative overflow-hidden">
-              <div class="absolute top-0 right-0 bg-emerald-500 text-slate-950 text-[10px] font-extrabold uppercase px-3 py-0.5 rounded-bl-lg">
-                Published v3 (Live)
-              </div>
-              <div class="flex items-center gap-3 mb-3">
-                <div class="w-10 h-10 rounded-xl bg-emerald-500/20 border border-emerald-500/40 flex items-center justify-center font-bold text-emerald-400">
+              <div class="flex items-center gap-3">
+                <div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-emerald-500/20 to-teal-500/10 border border-emerald-500/30 flex items-center justify-center font-bold text-emerald-400">
                   <i data-lucide="bot" class="w-5 h-5"></i>
                 </div>
                 <div>
-                  <h3 class="text-sm font-bold text-white">Arabic Customer Concierge</h3>
-                  <p class="text-xs text-slate-400">Mode: Autonomous • Dialect: Gulf/Saudi</p>
+                  <h2 class="text-xl font-bold text-white flex items-center gap-2">
+                    AI Agent Instruction Builder Studio
+                    <span class="text-[11px] font-bold px-2.5 py-0.5 rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">Production Clean Code</span>
+                  </h2>
+                  <p class="text-xs text-slate-400">Design agent persona, guardrails, and auto-draft with Gemini AI. Deploys live to WhatsApp, Messenger & Instagram.</p>
                 </div>
-              </div>
-              <p class="text-xs text-slate-300 mb-4">Grounded customer operations assistant that answers tier-1 FAQs, checks order status via tools, and escalates to humans upon sentiment breach.</p>
-              <div class="space-y-1.5 text-xs text-slate-400 border-t border-slate-800 pt-3">
-                <div class="flex justify-between"><span>Model:</span> <span class="text-white font-medium">GPT-4o (128k context)</span></div>
-                <div class="flex justify-between"><span>RAG Knowledge Base:</span> <span class="text-emerald-400 font-medium">Product Docs & Pricing</span></div>
-                <div class="flex justify-between"><span>Guardrails Active:</span> <span class="text-slate-200">PII Filter, Prompt Injection Shield</span></div>
               </div>
             </div>
+            <div class="flex items-center gap-3">
+              <button onclick="openAiDraftModal()" class="flex items-center gap-2 px-3.5 py-2.5 bg-purple-600/20 hover:bg-purple-600/30 text-purple-300 border border-purple-500/30 rounded-xl text-xs font-semibold shadow-lg shadow-purple-500/10 transition">
+                <i data-lucide="sparkles" class="w-4 h-4 text-purple-400"></i>
+                <span>✨ Auto-Draft with AI</span>
+              </button>
+              <button id="btn-deploy-instructions" onclick="deployInstructionsLive()" class="flex items-center gap-2 px-4 py-2.5 bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold text-xs rounded-xl shadow-lg shadow-emerald-500/20 transition">
+                <i data-lucide="send" class="w-4 h-4"></i>
+                <span>🚀 Deploy to Live Bots</span>
+              </button>
+            </div>
+          </div>
 
-            <!-- Agent 2 -->
-            <div class="p-5 rounded-2xl border border-slate-800 bg-slate-900/60 relative">
-              <div class="flex items-center gap-3 mb-3">
-                <div class="w-10 h-10 rounded-xl bg-purple-500/20 border border-purple-500/40 flex items-center justify-center font-bold text-purple-400">
-                  <i data-lucide="phone-call" class="w-5 h-5"></i>
+          <!-- Quick-Start Presets Bar -->
+          <div class="p-3.5 rounded-2xl border border-slate-800 bg-slate-900/60 flex flex-wrap items-center justify-between gap-3">
+            <div class="flex flex-wrap items-center gap-2 text-xs">
+              <span class="text-slate-400 font-semibold flex items-center gap-1.5 mr-1">
+                <i data-lucide="layout-template" class="w-3.5 h-3.5 text-slate-500"></i> Load Preset:
+              </span>
+              <button onclick="selectInstructionPreset('ecommerce')" class="px-3 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700/80 text-slate-200 border border-slate-700 font-medium transition flex items-center gap-1.5">
+                🛍️ E-Commerce Sales
+              </button>
+              <button onclick="selectInstructionPreset('support')" class="px-3 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700/80 text-slate-200 border border-slate-700 font-medium transition flex items-center gap-1.5">
+                🎧 Customer Care & FAQ
+              </button>
+              <button onclick="selectInstructionPreset('leads')" class="px-3 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700/80 text-slate-200 border border-slate-700 font-medium transition flex items-center gap-1.5">
+                🎯 Lead Gen & Sales
+              </button>
+              <button onclick="selectInstructionPreset('community')" class="px-3 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700/80 text-slate-200 border border-slate-700 font-medium transition flex items-center gap-1.5">
+                🚀 Community Concierge
+              </button>
+            </div>
+            <div id="builder-active-badge" class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[11px] font-bold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
+              <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+              <span id="builder-badge-text">Live Bot: Active</span>
+            </div>
+          </div>
+
+          <!-- Main Split Studio: Left Builder Form, Right Preview & Sandbox -->
+          <div class="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+            
+            <!-- LEFT COLUMN: Modular Builder Controls (7 cols) -->
+            <div class="lg:col-span-7 space-y-5">
+              
+              <!-- 1. Identity & Persona -->
+              <div class="p-5 rounded-2xl border border-slate-800 bg-slate-900/60 space-y-4">
+                <div class="flex items-center justify-between">
+                  <h3 class="text-sm font-bold text-white flex items-center gap-2">
+                    <span class="w-5 h-5 rounded-lg bg-emerald-500/10 text-emerald-400 flex items-center justify-center text-xs font-bold">1</span>
+                    Agent Identity & Demeanor
+                  </h3>
+                  <span class="text-[10px] text-slate-400 uppercase font-semibold">Persona & Tone</span>
                 </div>
-                <div>
-                  <h3 class="text-sm font-bold text-white">Voice Inbound Receptionist</h3>
-                  <p class="text-xs text-slate-400">Mode: Autonomous Voice • Latency: &lt;700ms</p>
+                
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div>
+                    <label class="block text-[11px] font-semibold text-slate-400 mb-1">Agent Display Name</label>
+                    <input id="builder-agent-name" type="text" oninput="compileInstructionsLive()" placeholder="e.g. Zara - E-Store Concierge" class="w-full px-3 py-2 bg-slate-950/80 border border-slate-800 rounded-xl text-xs text-white placeholder-slate-500 focus:outline-none focus:border-emerald-500/50 transition">
+                  </div>
+                  <div>
+                    <label class="block text-[11px] font-semibold text-slate-400 mb-1">Role / Persona Title</label>
+                    <input id="builder-role-title" type="text" oninput="compileInstructionsLive()" placeholder="e.g. 24/7 Operations Specialist" class="w-full px-3 py-2 bg-slate-950/80 border border-slate-800 rounded-xl text-xs text-white placeholder-slate-500 focus:outline-none focus:border-emerald-500/50 transition">
+                  </div>
+                </div>
+
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div>
+                    <label class="block text-[11px] font-semibold text-slate-400 mb-1">Tone of Voice</label>
+                    <select id="builder-tone" onchange="compileInstructionsLive()" class="w-full px-3 py-2 bg-slate-950/80 border border-slate-800 rounded-xl text-xs text-white focus:outline-none focus:border-emerald-500/50 transition">
+                      <option value="Friendly, empathetic, and polite">Friendly & Empathetic</option>
+                      <option value="Professional, consultative, and persuasive">Professional & Consultative</option>
+                      <option value="Energetic, warm, with friendly emojis">Energetic & Community-Centric</option>
+                      <option value="Direct, concise, and technical">Direct & Technical</option>
+                      <option value="Luxury, premium, and sophisticated">Luxury & Sophisticated</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label class="block text-[11px] font-semibold text-slate-400 mb-1">Primary Operating Language</label>
+                    <select id="builder-language" onchange="compileInstructionsLive()" class="w-full px-3 py-2 bg-slate-950/80 border border-slate-800 rounded-xl text-xs text-white focus:outline-none focus:border-emerald-500/50 transition">
+                      <option value="Bengali & English (Banglish friendly)">Bengali & English (Banglish friendly)</option>
+                      <option value="English Only">English Only</option>
+                      <option value="Bengali (Bangla & English)">Bengali & English</option>
+                      <option value="Arabic & English">Arabic & English</option>
+                    </select>
+                  </div>
                 </div>
               </div>
-              <p class="text-xs text-slate-300 mb-4">Real-time voice telephony agent utilizing streaming ASR and low-latency ElevenLabs neural synthesis for booking and qualification.</p>
-              <div class="space-y-1.5 text-xs text-slate-400 border-t border-slate-800 pt-3">
-                <div class="flex justify-between"><span>Model:</span> <span class="text-white font-medium">Claude 3.5 Sonnet</span></div>
-                <div class="flex justify-between"><span>Voice Pipeline:</span> <span class="text-purple-400 font-medium">Deepgram Nova-2 + ElevenLabs</span></div>
-                <div class="flex justify-between"><span>SLA Breach Escalation:</span> <span class="text-slate-200">Routes to Human Supervisor</span></div>
+
+              <!-- 2. Primary Mission -->
+              <div class="p-5 rounded-2xl border border-slate-800 bg-slate-900/60 space-y-3">
+                <div class="flex items-center justify-between">
+                  <h3 class="text-sm font-bold text-white flex items-center gap-2">
+                    <span class="w-5 h-5 rounded-lg bg-emerald-500/10 text-emerald-400 flex items-center justify-center text-xs font-bold">2</span>
+                    Primary Mission & Core Objective
+                  </h3>
+                  <span class="text-[10px] text-slate-400 uppercase font-semibold">Purpose</span>
+                </div>
+                <textarea id="builder-mission" rows="3" oninput="compileInstructionsLive()" placeholder="Describe what this bot is designed to accomplish..." class="w-full px-3.5 py-2.5 bg-slate-950/80 border border-slate-800 rounded-xl text-xs text-white placeholder-slate-500 focus:outline-none focus:border-emerald-500/50 transition"></textarea>
+              </div>
+
+              <!-- 3. Business Operating Rules & Policies -->
+              <div class="p-5 rounded-2xl border border-slate-800 bg-slate-900/60 space-y-3">
+                <div class="flex items-center justify-between">
+                  <h3 class="text-sm font-bold text-white flex items-center gap-2">
+                    <span class="w-5 h-5 rounded-lg bg-emerald-500/10 text-emerald-400 flex items-center justify-center text-xs font-bold">3</span>
+                    Business Operating Rules & Procedures
+                  </h3>
+                  <span class="text-[10px] text-emerald-400 uppercase font-semibold">Do's</span>
+                </div>
+                <p class="text-xs text-slate-400">Specific delivery policies, payment rules, return windows, or operational steps.</p>
+                
+                <div id="builder-rules-list" class="space-y-2">
+                  <!-- Dynamic rule items -->
+                </div>
+
+                <div class="flex items-center gap-2 pt-1">
+                  <input id="input-new-rule" type="text" placeholder="e.g. Inside Dhaka delivery is 24-48 hrs (BDT 70)" onkeydown="if(event.key==='Enter') addBusinessRule()" class="flex-1 px-3 py-2 bg-slate-950/80 border border-slate-800 rounded-xl text-xs text-white placeholder-slate-500 focus:outline-none focus:border-emerald-500/50 transition">
+                  <button type="button" onclick="addBusinessRule()" class="px-3 py-2 bg-slate-800 hover:bg-slate-700 text-emerald-400 text-xs font-bold rounded-xl border border-slate-700 transition">
+                    + Add Rule
+                  </button>
+                </div>
+              </div>
+
+              <!-- 4. Guardrails & Negative Constraints (DO NOTs) -->
+              <div class="p-5 rounded-2xl border border-slate-800 bg-slate-900/60 space-y-3">
+                <div class="flex items-center justify-between">
+                  <h3 class="text-sm font-bold text-white flex items-center gap-2">
+                    <span class="w-5 h-5 rounded-lg bg-rose-500/10 text-rose-400 flex items-center justify-center text-xs font-bold">4</span>
+                    Guardrails & Negative Constraints (DO NOTs)
+                  </h3>
+                  <span class="text-[10px] text-rose-400 uppercase font-semibold">Strict Boundaries</span>
+                </div>
+                <p class="text-xs text-slate-400">Strict negative boundaries to prevent hallucinations, leaks, and unauthorized promises.</p>
+                
+                <div id="builder-constraints-list" class="space-y-2">
+                  <!-- Dynamic constraint items -->
+                </div>
+
+                <div class="flex items-center gap-2 pt-1">
+                  <input id="input-new-constraint" type="text" placeholder="e.g. NEVER promise custom discounts beyond advertised promo codes" onkeydown="if(event.key==='Enter') addConstraint()" class="flex-1 px-3 py-2 bg-slate-950/80 border border-slate-800 rounded-xl text-xs text-white placeholder-slate-500 focus:outline-none focus:border-rose-500/50 transition">
+                  <button type="button" onclick="addConstraint()" class="px-3 py-2 bg-slate-800 hover:bg-slate-700 text-rose-400 text-xs font-bold rounded-xl border border-slate-700 transition">
+                    + Add Boundary
+                  </button>
+                </div>
+              </div>
+
+              <!-- 5. Escalation & Handoff -->
+              <div class="p-5 rounded-2xl border border-slate-800 bg-slate-900/60 space-y-3">
+                <div class="flex items-center justify-between">
+                  <h3 class="text-sm font-bold text-white flex items-center gap-2">
+                    <span class="w-5 h-5 rounded-lg bg-purple-500/10 text-purple-400 flex items-center justify-center text-xs font-bold">5</span>
+                    Escalation & Human Handoff Protocol
+                  </h3>
+                  <span class="text-[10px] text-purple-400 uppercase font-semibold">Fallback</span>
+                </div>
+                <textarea id="builder-escalation" rows="2" oninput="compileInstructionsLive()" placeholder="When customer is dissatisfied or requests refund, escalate to human team..." class="w-full px-3.5 py-2.5 bg-slate-950/80 border border-slate-800 rounded-xl text-xs text-white placeholder-slate-500 focus:outline-none focus:border-emerald-500/50 transition"></textarea>
+              </div>
+
+              <!-- 6. Greeting Message -->
+              <div class="p-5 rounded-2xl border border-slate-800 bg-slate-900/60 space-y-3">
+                <div class="flex items-center justify-between">
+                  <h3 class="text-sm font-bold text-white flex items-center gap-2">
+                    <span class="w-5 h-5 rounded-lg bg-amber-500/10 text-amber-400 flex items-center justify-center text-xs font-bold">6</span>
+                    Opening Greeting Message
+                  </h3>
+                  <span class="text-[10px] text-amber-400 uppercase font-semibold">First Touch</span>
+                </div>
+                <textarea id="builder-greeting" rows="2" oninput="compileInstructionsLive()" placeholder="Hello! Welcome to our store. How can I assist you today?" class="w-full px-3.5 py-2.5 bg-slate-950/80 border border-slate-800 rounded-xl text-xs text-white placeholder-slate-500 focus:outline-none focus:border-emerald-500/50 transition"></textarea>
+              </div>
+
+            </div>
+
+            <!-- RIGHT COLUMN: Compiled Prompt & Sandbox Simulator (5 cols) -->
+            <div class="lg:col-span-5 space-y-5 sticky top-6">
+              
+              <!-- Card A: Live Compiled System Prompt Preview -->
+              <div class="p-5 rounded-2xl border border-emerald-500/30 bg-slate-900/70 shadow-2xl relative overflow-hidden space-y-3">
+                <div class="flex items-center justify-between pb-2 border-b border-slate-800">
+                  <div class="flex items-center gap-2">
+                    <i data-lucide="file-code" class="w-4 h-4 text-emerald-400"></i>
+                    <h3 class="text-xs font-bold uppercase tracking-wider text-white">Live Compiled System Prompt</h3>
+                  </div>
+                  <button type="button" onclick="copyCompiledPrompt()" class="text-[11px] text-slate-400 hover:text-emerald-400 font-semibold transition flex items-center gap-1">
+                    <i data-lucide="copy" class="w-3.5 h-3.5"></i> Copy
+                  </button>
+                </div>
+
+                <div class="flex items-center justify-between text-[11px] text-slate-400 px-1">
+                  <div>Words: <span id="builder-word-count" class="text-white font-bold">0</span></div>
+                  <div>Est. Tokens: <span id="builder-token-count" class="text-emerald-400 font-bold">0</span></div>
+                  <div>Target: <span class="text-purple-300 font-semibold">Gemini 1.5 Pro</span></div>
+                </div>
+
+                <div class="relative">
+                  <textarea id="builder-compiled-preview" readonly rows="9" class="w-full font-mono text-[11px] text-slate-300 bg-slate-950/90 border border-slate-800 rounded-xl p-3 resize-none focus:outline-none"></textarea>
+                </div>
+              </div>
+
+              <!-- Card B: Interactive Test Sandbox Simulator -->
+              <div class="p-5 rounded-2xl border border-slate-800 bg-slate-900/70 shadow-2xl space-y-3">
+                <div class="flex items-center justify-between pb-2 border-b border-slate-800">
+                  <div class="flex items-center gap-2">
+                    <i data-lucide="play-circle" class="w-4 h-4 text-emerald-400"></i>
+                    <h3 class="text-xs font-bold uppercase tracking-wider text-white">Interactive Test Sandbox</h3>
+                  </div>
+                  <span class="text-[10px] text-slate-400 bg-slate-800 px-2 py-0.5 rounded-full font-semibold">RAG Grounded</span>
+                </div>
+
+                <p class="text-[11px] text-slate-400">Simulate customer inquiries with your draft instructions and active PostgreSQL knowledge chunks.</p>
+
+                <!-- Quick Test Chips -->
+                <div class="flex flex-wrap gap-1.5 text-[10px]">
+                  <button type="button" onclick="runSandboxTest('What is your delivery charge and timeframe inside Dhaka?')" class="px-2 py-1 rounded-lg bg-slate-800/80 hover:bg-slate-700 text-slate-300 border border-slate-700/60 transition">
+                    📦 Delivery Time
+                  </button>
+                  <button type="button" onclick="runSandboxTest('What is your subscription pricing and payment methods?')" class="px-2 py-1 rounded-lg bg-slate-800/80 hover:bg-slate-700 text-slate-300 border border-slate-700/60 transition">
+                    💳 Pricing & Plans
+                  </button>
+                  <button type="button" onclick="runSandboxTest('Can I get a refund if I am not satisfied?')" class="px-2 py-1 rounded-lg bg-slate-800/80 hover:bg-slate-700 text-slate-300 border border-slate-700/60 transition">
+                    🔄 Refund Policy
+                  </button>
+                </div>
+
+                <!-- Chat simulation box -->
+                <div id="sandbox-chat-box" class="h-64 overflow-y-auto p-3 bg-slate-950/90 border border-slate-800 rounded-xl space-y-3 text-xs">
+                  <div class="flex items-start gap-2">
+                    <div class="w-6 h-6 rounded-lg bg-emerald-500/20 text-emerald-400 flex items-center justify-center font-bold text-[10px]">
+                      AI
+                    </div>
+                    <div class="bg-slate-900 border border-slate-800 p-2.5 rounded-xl rounded-tl-none max-w-[85%] text-slate-300" id="sandbox-initial-greeting">
+                      Hello! Welcome to our store. How can I assist you with your shopping or order today?
+                    </div>
+                  </div>
+                </div>
+
+                <!-- Input box -->
+                <div class="flex items-center gap-2 pt-1">
+                  <input id="sandbox-user-input" type="text" placeholder="Type a test question..." onkeydown="if(event.key==='Enter') runSandboxTest()" class="flex-1 px-3 py-2 bg-slate-950/80 border border-slate-800 rounded-xl text-xs text-white placeholder-slate-500 focus:outline-none focus:border-emerald-500/50 transition">
+                  <button id="btn-sandbox-send" type="button" onclick="runSandboxTest()" class="px-3.5 py-2 bg-emerald-500 hover:bg-emerald-400 text-slate-950 text-xs font-bold rounded-xl transition flex items-center gap-1">
+                    <i data-lucide="send" class="w-3.5 h-3.5"></i>
+                    <span>Test</span>
+                  </button>
+                </div>
+              </div>
+
+            </div>
+
+          </div>
+
+        </div>
+      </section>
+
+      <!-- AI Auto-Draft Modal -->
+      <div id="modal-ai-draft" class="fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden">
+        <div class="w-full max-w-lg bg-slate-900 border border-purple-500/30 rounded-2xl p-6 shadow-2xl space-y-4">
+          <div class="flex items-center justify-between pb-3 border-b border-slate-800">
+            <div class="flex items-center gap-2.5">
+              <div class="w-8 h-8 rounded-xl bg-purple-500/20 text-purple-400 flex items-center justify-center font-bold">
+                <i data-lucide="sparkles" class="w-4 h-4"></i>
+              </div>
+              <div>
+                <h3 class="text-sm font-bold text-white">AI Auto-Draft Instruction Set</h3>
+                <p class="text-[11px] text-slate-400">Powered by Google Gemini 1.5</p>
+              </div>
+            </div>
+            <button onclick="closeAiDraftModal()" class="text-slate-400 hover:text-white transition">
+              <i data-lucide="x" class="w-4 h-4"></i>
+            </button>
+          </div>
+
+          <div class="space-y-3">
+            <div>
+              <label class="block text-xs font-semibold text-slate-300 mb-1">Describe your business or store in 1-2 sentences</label>
+              <textarea id="ai-draft-desc" rows="3" placeholder="e.g. We sell premium leather bags and footwear in Bangladesh with Cash on Delivery inside Dhaka and 7-day returns." class="w-full px-3.5 py-2.5 bg-slate-950 border border-slate-800 rounded-xl text-xs text-white placeholder-slate-500 focus:outline-none focus:border-purple-500/50 transition"></textarea>
+            </div>
+
+            <div class="grid grid-cols-2 gap-3">
+              <div>
+                <label class="block text-[11px] font-semibold text-slate-400 mb-1">Target Channel</label>
+                <select id="ai-draft-channel" class="w-full px-3 py-2 bg-slate-950 border border-slate-800 rounded-xl text-xs text-white focus:outline-none focus:border-purple-500/50 transition">
+                  <option value="WhatsApp & Messenger">WhatsApp & Messenger</option>
+                  <option value="Instagram Direct">Instagram Direct</option>
+                  <option value="Omnichannel (All)">Omnichannel (All)</option>
+                </select>
+              </div>
+              <div>
+                <label class="block text-[11px] font-semibold text-slate-400 mb-1">Tone Preference</label>
+                <select id="ai-draft-tone" class="w-full px-3 py-2 bg-slate-950 border border-slate-800 rounded-xl text-xs text-white focus:outline-none focus:border-purple-500/50 transition">
+                  <option value="Friendly, empathetic, and polite">Friendly & Helpful</option>
+                  <option value="Professional, consultative, and persuasive">Professional Closer</option>
+                  <option value="Energetic, warm, with friendly emojis">Energetic Community</option>
+                </select>
               </div>
             </div>
           </div>
+
+          <div class="flex items-center justify-end gap-2 pt-2 border-t border-slate-800">
+            <button onclick="closeAiDraftModal()" class="px-4 py-2 text-xs font-semibold text-slate-400 hover:text-white transition">
+              Cancel
+            </button>
+            <button id="btn-execute-ai-draft" onclick="executeAiDraft()" class="px-4 py-2 bg-purple-600 hover:bg-purple-500 text-white font-bold text-xs rounded-xl shadow-lg shadow-purple-600/20 transition flex items-center gap-1.5">
+              <i data-lucide="sparkles" class="w-3.5 h-3.5"></i>
+              <span>Generate Instructions</span>
+            </button>
+          </div>
         </div>
-      </section>
+      </div>
+
+      <!-- 1-Click Resolve Knowledge Gap Modal -->
+      <div id="modalResolveGap" class="fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden">
+        <div class="w-full max-w-lg bg-slate-900 border border-emerald-500/40 rounded-2xl p-6 shadow-2xl space-y-4">
+          <div class="flex items-center justify-between pb-3 border-b border-slate-800">
+            <div class="flex items-center gap-2.5">
+              <div class="w-8 h-8 rounded-xl bg-emerald-500/20 text-emerald-400 flex items-center justify-center font-bold">
+                <i data-lucide="database" class="w-4 h-4"></i>
+              </div>
+              <div>
+                <h3 class="text-sm font-bold text-white">Add to Knowledge Base & Resolve Gap</h3>
+                <p class="text-[11px] text-slate-400">Instantly chunks and indexes answer into pgvector</p>
+              </div>
+            </div>
+            <button onclick="closeResolveGapModal()" class="text-slate-400 hover:text-white transition">
+              <i data-lucide="x" class="w-4 h-4"></i>
+            </button>
+          </div>
+
+          <div class="space-y-3 text-xs">
+            <input type="hidden" id="resolveGapId">
+            <div class="p-3 rounded-xl bg-slate-950 border border-slate-800">
+              <span class="text-[10px] font-bold uppercase text-slate-500">Customer Question:</span>
+              <p id="resolveGapQuestionText" class="text-white font-medium mt-0.5 text-xs"></p>
+            </div>
+
+            <div>
+              <label class="block text-[11px] font-semibold text-slate-300 mb-1">Document / FAQ Title</label>
+              <input id="resolveGapTitleInput" type="text" placeholder="e.g. Delivery Policy for Chittagong & Sylhet" class="w-full px-3 py-2 bg-slate-950 border border-slate-800 rounded-xl text-xs text-white focus:border-emerald-500/50 focus:outline-none">
+            </div>
+
+            <div>
+              <div class="flex items-center justify-between mb-1">
+                <label class="block text-[11px] font-semibold text-slate-300">Verified Answer / Guideline Content</label>
+                <button type="button" onclick="triggerRegenerateDraftInModal()" id="btnModalRedraft" class="text-[10px] text-purple-400 hover:text-purple-300 font-semibold flex items-center gap-1">
+                  <i data-lucide="sparkles" class="w-3 h-3"></i> AI Re-Draft
+                </button>
+              </div>
+              <textarea id="resolveGapAnswerInput" rows="4" placeholder="Enter verified factual answer..." class="w-full px-3.5 py-2.5 bg-slate-950 border border-slate-800 rounded-xl text-xs text-white placeholder-slate-500 focus:border-emerald-500/50 focus:outline-none"></textarea>
+            </div>
+          </div>
+
+          <div class="flex items-center justify-end gap-2 pt-2 border-t border-slate-800">
+            <button onclick="closeResolveGapModal()" class="px-4 py-2 text-xs font-semibold text-slate-400 hover:text-white transition">
+              Cancel
+            </button>
+            <button id="btnConfirmResolveGap" onclick="submitResolveGap()" class="px-4 py-2 bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold text-xs rounded-xl shadow-lg shadow-emerald-500/20 transition flex items-center gap-1.5">
+              <i data-lucide="check-circle" class="w-3.5 h-3.5"></i>
+              <span>Index in pgvector & Resolve</span>
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Log Customer Question Modal -->
+      <div id="modalLogGap" class="fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden">
+        <div class="w-full max-w-md bg-slate-900 border border-amber-500/30 rounded-2xl p-6 shadow-2xl space-y-4">
+          <div class="flex items-center justify-between pb-3 border-b border-slate-800">
+            <h3 class="text-sm font-bold text-white flex items-center gap-2">
+              <i data-lucide="help-circle" class="w-4 h-4 text-amber-400"></i> Log Customer Question Gap
+            </h3>
+            <button onclick="closeLogGapModal()" class="text-slate-400 hover:text-white">✕</button>
+          </div>
+
+          <div class="space-y-3 text-xs">
+            <div>
+              <label class="block text-[11px] font-semibold text-slate-300 mb-1">Customer Question</label>
+              <textarea id="logGapQuestionInput" rows="3" placeholder="What question did customer ask that lacked answers?..." class="w-full px-3.5 py-2 bg-slate-950 border border-slate-800 rounded-xl text-xs text-white focus:border-amber-500/50 focus:outline-none"></textarea>
+            </div>
+            <div>
+              <label class="block text-[11px] font-semibold text-slate-300 mb-1">Channel Origin</label>
+              <select id="logGapChannelInput" class="w-full px-3 py-2 bg-slate-950 border border-slate-800 rounded-xl text-xs text-white focus:border-amber-500/50 focus:outline-none">
+                <option value="whatsapp">WhatsApp</option>
+                <option value="messenger">Facebook Messenger</option>
+                <option value="instagram">Instagram</option>
+                <option value="webchat">Webchat</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="flex items-center justify-end gap-2 pt-2 border-t border-slate-800">
+            <button onclick="closeLogGapModal()" class="px-3 py-1.5 text-xs text-slate-400 hover:text-white">Cancel</button>
+            <button onclick="submitLogGap()" class="px-4 py-2 bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold text-xs rounded-xl shadow-md transition">Save Gap</button>
+          </div>
+        </div>
+      </div>
+
+
 
       <!-- ============================================================== -->
       <!-- TAB 4: RAG KNOWLEDGE BASE -->
@@ -497,6 +869,101 @@
               </table>
             </div>
           </div>
+
+          <!-- ============================================================== -->
+          <!-- KNOWLEDGE GAPS & UNANSWERED QUERIES CENTER -->
+          <!-- ============================================================== -->
+          <div class="p-5 rounded-2xl border border-amber-500/30 bg-slate-900/70 shadow-2xl space-y-4">
+            <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-slate-800">
+              <div>
+                <div class="flex items-center gap-2">
+                  <div class="w-8 h-8 rounded-xl bg-amber-500/20 text-amber-400 flex items-center justify-center font-bold">
+                    <i data-lucide="help-circle" class="w-4 h-4"></i>
+                  </div>
+                  <div>
+                    <h3 class="text-sm font-bold text-white flex items-center gap-2">
+                      Knowledge Gaps & Unanswered Queries
+                      <span class="px-2 py-0.5 rounded-full bg-amber-500/10 text-amber-400 text-[10px] font-bold border border-amber-500/20">AI Detection</span>
+                    </h3>
+                    <p class="text-[11px] text-slate-400">Customer questions asked on WhatsApp, Messenger & IG that lacked RAG documentation.</p>
+                  </div>
+                </div>
+              </div>
+              <div class="flex items-center gap-2">
+                <button onclick="scanInboxGaps()" id="btnScanGaps" class="px-3 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white border border-slate-700 text-xs font-semibold transition flex items-center gap-1.5">
+                  <i data-lucide="scan" class="w-3.5 h-3.5 text-amber-400"></i>
+                  <span>Scan Inbox</span>
+                </button>
+                <button onclick="openLogGapModal()" class="px-3 py-1.5 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 text-xs font-bold transition flex items-center gap-1 shadow-md shadow-amber-500/20">
+                  <i data-lucide="plus" class="w-3.5 h-3.5"></i>
+                  <span>+ Log Gap</span>
+                </button>
+              </div>
+            </div>
+
+            <!-- Metric Cards -->
+            <div class="grid grid-cols-2 sm:grid-cols-4 gap-3">
+              <div class="p-3 rounded-xl bg-slate-950/80 border border-slate-800/80">
+                <span class="text-[10px] uppercase font-bold text-slate-400">Unresolved Gaps</span>
+                <p id="statUnresolvedGaps" class="text-xl font-black text-amber-400 mt-0.5">0</p>
+                <span class="text-[10px] text-slate-500">Needs FAQ doc</span>
+              </div>
+              <div class="p-3 rounded-xl bg-slate-950/80 border border-slate-800/80">
+                <span class="text-[10px] uppercase font-bold text-slate-400">Resolved Gaps</span>
+                <p id="statResolvedGaps" class="text-xl font-black text-emerald-400 mt-0.5">0</p>
+                <span class="text-[10px] text-slate-500">Indexed in pgvector</span>
+              </div>
+              <div class="p-3 rounded-xl bg-slate-950/80 border border-slate-800/80">
+                <span class="text-[10px] uppercase font-bold text-slate-400">Resolution Rate</span>
+                <p id="statResolutionRate" class="text-xl font-black text-purple-400 mt-0.5">0%</p>
+                <span class="text-[10px] text-slate-500">Knowledge coverage</span>
+              </div>
+              <div class="p-3 rounded-xl bg-slate-950/80 border border-slate-800/80">
+                <span class="text-[10px] uppercase font-bold text-slate-400">Total Monitored</span>
+                <p id="statTotalGaps" class="text-xl font-black text-white mt-0.5">0</p>
+                <span class="text-[10px] text-slate-500">Customer questions</span>
+              </div>
+            </div>
+
+            <!-- Filter Controls -->
+            <div class="flex flex-wrap items-center justify-between gap-2 pt-1 text-xs">
+              <div class="flex flex-wrap items-center gap-1.5" id="gapStatusFilters">
+                <button onclick="filterKnowledgeGaps('all')" data-status="all" class="gap-filter-btn px-2.5 py-1 rounded-lg bg-amber-500/20 text-amber-300 font-bold border border-amber-500/30">
+                  All
+                </button>
+                <button onclick="filterKnowledgeGaps('unresolved')" data-status="unresolved" class="gap-filter-btn px-2.5 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 font-medium">
+                  Unresolved
+                </button>
+                <button onclick="filterKnowledgeGaps('resolved')" data-status="resolved" class="gap-filter-btn px-2.5 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 font-medium">
+                  Resolved
+                </button>
+                <button onclick="filterKnowledgeGaps('ignored')" data-status="ignored" class="gap-filter-btn px-2.5 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 font-medium">
+                  Ignored
+                </button>
+              </div>
+              <div class="flex items-center gap-2">
+                <select id="gapChannelFilter" onchange="filterKnowledgeGapsChannel(this.value)" class="bg-slate-950 border border-slate-800 rounded-lg px-2.5 py-1 text-xs text-slate-300 focus:outline-none">
+                  <option value="all">All Channels</option>
+                  <option value="whatsapp">WhatsApp</option>
+                  <option value="messenger">Messenger</option>
+                  <option value="instagram">Instagram</option>
+                  <option value="inbox_scan">Inbox Scan</option>
+                  <option value="manual">Manual</option>
+                </select>
+                <button onclick="loadKnowledgeGaps()" class="text-slate-400 hover:text-white p-1">
+                  <i data-lucide="refresh-cw" class="w-3.5 h-3.5"></i>
+                </button>
+              </div>
+            </div>
+
+            <!-- Gaps List Container -->
+            <div id="knowledgeGapsContainer" class="space-y-2.5 max-h-[420px] overflow-y-auto pr-1">
+              <div class="text-center py-6 text-slate-500 text-xs italic">
+                Loading knowledge gaps...
+              </div>
+            </div>
+          </div>
+
 
           <!-- Semantic Vector Retrieval Tester -->
           <div class="p-5 rounded-2xl border border-slate-800 bg-slate-900/60 space-y-4">
@@ -618,68 +1085,684 @@
         </div>
       </section>
 
+      <!-- ============================================================== -->
+      <!-- Integrations & Connected Applications                          -->
+      <!-- ============================================================== -->
+      <section id="tab-integrations" class="flex-1 p-8 overflow-y-auto hidden">
+        <div class="max-w-6xl mx-auto space-y-6">
+          <!-- Header -->
+          <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-slate-800/80">
+            <div>
+              <div class="flex items-center gap-2.5">
+                <span class="w-9 h-9 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 flex items-center justify-center shadow-inner">
+                  <i data-lucide="blocks" class="w-5 h-5"></i>
+                </span>
+                <h2 class="text-2xl font-extrabold text-white tracking-tight">Integrations & Connected Applications</h2>
+              </div>
+              <p class="text-xs text-slate-400 mt-1 pl-11">Connect third-party channels, calendars, e-commerce stores, and CRM tools to your autonomous agent.</p>
+            </div>
+            <button onclick="openRequestIntegrationModal()" class="px-4 py-2.5 bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 font-semibold text-xs rounded-xl transition flex items-center gap-2 shrink-0 shadow-sm hover:border-slate-600">
+              <i data-lucide="plus-circle" class="w-4 h-4 text-emerald-400"></i>
+              <span>Request Integration</span>
+            </button>
+          </div>
+
+          <!-- Category Filter Pills -->
+          <div class="flex items-center gap-2 overflow-x-auto pb-1 scrollbar-thin">
+            <button onclick="setIntegrationsCategory('all')" id="cat-btn-all" class="px-3.5 py-1.5 rounded-lg text-xs font-semibold bg-emerald-500 text-slate-950 transition flex items-center gap-2 shrink-0 shadow-sm">
+              <span>All Integrations</span>
+              <span id="cat-count-all" class="px-1.5 py-0.2 rounded-md bg-slate-950/20 text-slate-950 text-[10px] font-bold">13</span>
+            </button>
+            <button onclick="setIntegrationsCategory('messaging')" id="cat-btn-messaging" class="px-3.5 py-1.5 rounded-lg text-xs font-medium bg-slate-900 border border-slate-800 text-slate-400 hover:text-white hover:bg-slate-800 transition flex items-center gap-2 shrink-0">
+              <span>Messaging & Channels</span>
+              <span id="cat-count-messaging" class="px-1.5 py-0.2 rounded-md bg-slate-800 text-slate-300 text-[10px] font-bold">6</span>
+            </button>
+            <button onclick="setIntegrationsCategory('calendar')" id="cat-btn-calendar" class="px-3.5 py-1.5 rounded-lg text-xs font-medium bg-slate-900 border border-slate-800 text-slate-400 hover:text-white hover:bg-slate-800 transition flex items-center gap-2 shrink-0">
+              <span>Calendars</span>
+              <span id="cat-count-calendar" class="px-1.5 py-0.2 rounded-md bg-slate-800 text-slate-300 text-[10px] font-bold">3</span>
+            </button>
+            <button onclick="setIntegrationsCategory('meeting')" id="cat-btn-meeting" class="px-3.5 py-1.5 rounded-lg text-xs font-medium bg-slate-900 border border-slate-800 text-slate-400 hover:text-white hover:bg-slate-800 transition flex items-center gap-2 shrink-0">
+              <span>Meetings & Video</span>
+              <span id="cat-count-meeting" class="px-1.5 py-0.2 rounded-md bg-slate-800 text-slate-300 text-[10px] font-bold">1</span>
+            </button>
+            <button onclick="setIntegrationsCategory('ecommerce')" id="cat-btn-ecommerce" class="px-3.5 py-1.5 rounded-lg text-xs font-medium bg-slate-900 border border-slate-800 text-slate-400 hover:text-white hover:bg-slate-800 transition flex items-center gap-2 shrink-0">
+              <span>E-Commerce Stores</span>
+              <span id="cat-count-ecommerce" class="px-1.5 py-0.2 rounded-md bg-slate-800 text-slate-300 text-[10px] font-bold">2</span>
+            </button>
+            <button onclick="setIntegrationsCategory('productivity')" id="cat-btn-productivity" class="px-3.5 py-1.5 rounded-lg text-xs font-medium bg-slate-900 border border-slate-800 text-slate-400 hover:text-white hover:bg-slate-800 transition flex items-center gap-2 shrink-0">
+              <span>Productivity</span>
+              <span id="cat-count-productivity" class="px-1.5 py-0.2 rounded-md bg-slate-800 text-slate-300 text-[10px] font-bold">1</span>
+            </button>
+          </div>
+
+          <!-- Search and Live Counter Bar -->
+          <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-slate-900/60 p-3 rounded-2xl border border-slate-800/80">
+            <div class="relative flex-1 max-w-md">
+              <i data-lucide="search" class="w-4 h-4 text-slate-500 absolute left-3.5 top-1/2 -translate-y-1/2"></i>
+              <input 
+                id="integrationSearchInput"
+                oninput="onIntegrationSearch(this.value)"
+                type="text" 
+                placeholder="Search integration by name, category..." 
+                class="w-full bg-slate-950 border border-slate-800 rounded-xl pl-10 pr-4 py-2 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-emerald-500 transition"
+              />
+            </div>
+            <div class="text-xs font-semibold text-slate-400 px-2 flex items-center gap-1.5">
+              <span id="availableIntegrationsCount" class="text-white font-bold">13</span> available integration(s)
+            </div>
+          </div>
+
+          <!-- Grid of Integration Cards -->
+          <div id="integrationsGrid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+            <!-- Rendered dynamically by JavaScript -->
+          </div>
+        </div>
+      </section>
+
     </main>
+  </div>
+
+  <!-- ============================================================== -->
+  <!-- Authentication Modal Dialog (Sign In & Create Workspace)       -->
+  <!-- ============================================================== -->
+  <div id="authModal" class="fixed inset-0 z-[100] flex items-center justify-center bg-slate-950/85 backdrop-blur-md p-4 hidden">
+    <div class="bg-slate-900 border border-slate-700/80 rounded-3xl max-w-md w-full p-6 sm:p-8 shadow-2xl space-y-6 animate-in fade-in zoom-in duration-150">
+      
+      <!-- Brand Logo & Header -->
+      <div class="text-center space-y-2">
+        <div class="inline-flex items-center justify-center w-12 h-12 rounded-2xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 shadow-inner">
+          <i data-lucide="bot" class="w-7 h-7"></i>
+        </div>
+        <h2 class="text-2xl font-black text-white tracking-tight">Gabster AI</h2>
+        <p class="text-xs text-slate-400">Autonomous Customer Operations & Messaging Hub</p>
+      </div>
+
+      <!-- Mode Switcher Tabs -->
+      <div class="flex p-1 rounded-xl bg-slate-950 border border-slate-800 gap-1">
+        <button id="authTabLogin" onclick="switchAuthMode('login')" type="button" class="flex-1 py-2 text-xs font-bold rounded-lg transition bg-emerald-500 text-slate-950 shadow-sm">
+          Sign In
+        </button>
+        <button id="authTabRegister" onclick="switchAuthMode('register')" type="button" class="flex-1 py-2 text-xs font-bold rounded-lg transition text-slate-400 hover:text-white">
+          Create Account
+        </button>
+      </div>
+
+      <!-- Sign In (Login) Form -->
+      <form id="signInForm" onsubmit="submitLogin(event)" class="space-y-4">
+        <div>
+          <label class="block text-xs font-semibold text-slate-300 mb-1.5">Email Address</label>
+          <div class="relative">
+            <i data-lucide="mail" class="w-4 h-4 text-slate-500 absolute left-3.5 top-1/2 -translate-y-1/2"></i>
+            <input 
+              id="loginEmail" 
+              type="email" 
+              required
+              placeholder="admin@gabster.ai" 
+              class="w-full bg-slate-950 border border-slate-800 rounded-xl pl-10 pr-4 py-2.5 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-emerald-500 transition"
+            />
+          </div>
+        </div>
+
+        <div>
+          <label class="block text-xs font-semibold text-slate-300 mb-1.5">Password</label>
+          <div class="relative">
+            <i data-lucide="lock" class="w-4 h-4 text-slate-500 absolute left-3.5 top-1/2 -translate-y-1/2"></i>
+            <input 
+              id="loginPassword" 
+              type="password" 
+              required
+              placeholder="••••••••" 
+              class="w-full bg-slate-950 border border-slate-800 rounded-xl pl-10 pr-4 py-2.5 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-emerald-500 transition font-mono"
+            />
+          </div>
+        </div>
+
+        <!-- Quick Demo Shortcut Button -->
+        <div class="flex items-center justify-between text-xs pt-0.5">
+          <span class="text-slate-500 text-[11px]">Testing demo account?</span>
+          <button type="button" onclick="fillDemoCredentials()" class="text-[11px] font-semibold text-emerald-400 hover:underline flex items-center gap-1">
+            <i data-lucide="sparkles" class="w-3 h-3"></i> Fill Demo Admin
+          </button>
+        </div>
+
+        <div id="loginStatus" class="hidden text-xs p-3 rounded-xl"></div>
+
+        <button 
+          id="btnLoginSubmit" 
+          type="submit" 
+          class="w-full py-2.5 px-4 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 text-xs font-bold transition flex items-center justify-center gap-2 shadow-lg shadow-emerald-500/20"
+        >
+          <span>Sign In to Workspace</span>
+        </button>
+      </form>
+
+      <!-- Sign Up (Registration) Form -->
+      <form id="signUpForm" onsubmit="submitRegister(event)" class="space-y-4 hidden">
+        <div>
+          <label class="block text-xs font-semibold text-slate-300 mb-1.5">Full Name</label>
+          <div class="relative">
+            <i data-lucide="user" class="w-4 h-4 text-slate-500 absolute left-3.5 top-1/2 -translate-y-1/2"></i>
+            <input 
+              id="registerFullName" 
+              type="text" 
+              required
+              placeholder="e.g. Newton Al-Jabir" 
+              class="w-full bg-slate-950 border border-slate-800 rounded-xl pl-10 pr-4 py-2.5 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-emerald-500 transition"
+            />
+          </div>
+        </div>
+
+        <div>
+          <label class="block text-xs font-semibold text-slate-300 mb-1.5">Work Email</label>
+          <div class="relative">
+            <i data-lucide="mail" class="w-4 h-4 text-slate-500 absolute left-3.5 top-1/2 -translate-y-1/2"></i>
+            <input 
+              id="registerEmail" 
+              type="email" 
+              required
+              placeholder="newton@mycompany.com" 
+              class="w-full bg-slate-950 border border-slate-800 rounded-xl pl-10 pr-4 py-2.5 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-emerald-500 transition"
+            />
+          </div>
+        </div>
+
+        <div>
+          <label class="block text-xs font-semibold text-slate-300 mb-1.5">Workspace / Company Name</label>
+          <div class="relative">
+            <i data-lucide="building-2" class="w-4 h-4 text-slate-500 absolute left-3.5 top-1/2 -translate-y-1/2"></i>
+            <input 
+              id="registerOrgName" 
+              type="text" 
+              required
+              placeholder="e.g. TechVibe Labs" 
+              class="w-full bg-slate-950 border border-slate-800 rounded-xl pl-10 pr-4 py-2.5 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-emerald-500 transition"
+            />
+          </div>
+        </div>
+
+        <div>
+          <label class="block text-xs font-semibold text-slate-300 mb-1.5">Password (Min 8 Characters)</label>
+          <div class="relative">
+            <i data-lucide="lock" class="w-4 h-4 text-slate-500 absolute left-3.5 top-1/2 -translate-y-1/2"></i>
+            <input 
+              id="registerPassword" 
+              type="password" 
+              required
+              minlength="8"
+              placeholder="••••••••" 
+              class="w-full bg-slate-950 border border-slate-800 rounded-xl pl-10 pr-4 py-2.5 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-emerald-500 transition font-mono"
+            />
+          </div>
+        </div>
+
+        <div id="registerStatus" class="hidden text-xs p-3 rounded-xl"></div>
+
+        <button 
+          id="btnRegisterSubmit" 
+          type="submit" 
+          class="w-full py-2.5 px-4 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 text-xs font-bold transition flex items-center justify-center gap-2 shadow-lg shadow-emerald-500/20"
+        >
+          <span>Create Workspace & Start Free</span>
+        </button>
+      </form>
+
+      <!-- Footer Info -->
+      <div class="pt-2 text-center text-[11px] text-slate-500 border-t border-slate-800">
+        Includes 10,000 Free Starter AI Credits • Multi-Tenant Isolated
+      </div>
+    </div>
+  </div>
+
+  <!-- ============================================================== -->
+  <!-- Connect Integration Modal Dialog                               -->
+  <!-- ============================================================== -->
+  <div id="connectIntegrationModal" class="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/80 backdrop-blur-sm p-4 hidden">
+    <div class="bg-slate-900 border border-slate-700/80 rounded-2xl max-w-lg w-full p-6 shadow-2xl space-y-5 animate-in fade-in zoom-in duration-150">
+      <div class="flex items-start justify-between border-b border-slate-800 pb-3">
+        <div class="flex items-center gap-3">
+          <div id="connectModalIconBox" class="w-10 h-10 rounded-xl bg-slate-800 text-emerald-400 border border-slate-700 flex items-center justify-center shadow-inner">
+            <i id="connectModalIcon" data-lucide="blocks" class="w-5 h-5"></i>
+          </div>
+          <div>
+            <h3 class="text-base font-bold text-white flex items-center gap-2">
+              <span>Connect</span> <span id="connectModalAppName" class="text-emerald-400">Facebook Messenger</span>
+            </h3>
+            <p class="text-xs text-slate-400">Configure authentication credentials</p>
+          </div>
+        </div>
+        <button onclick="closeConnectModal()" class="text-slate-400 hover:text-white p-1 rounded-lg hover:bg-slate-800 transition">
+          <i data-lucide="x" class="w-5 h-5"></i>
+        </button>
+      </div>
+
+      <div class="space-y-4">
+        <div>
+          <label id="connectApiKeyLabel" class="block text-xs font-semibold text-slate-300 mb-1.5">
+            API Key / Token <span class="text-emerald-400">*</span>
+          </label>
+          <input 
+            id="connectApiKey" 
+            type="password" 
+            placeholder="Enter API Key / Access Token..." 
+            class="w-full bg-slate-950 border border-slate-800 rounded-xl px-3.5 py-2.5 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-emerald-500 transition font-mono"
+          />
+        </div>
+
+        <div>
+          <label id="connectApiSecretLabel" class="block text-xs font-semibold text-slate-300 mb-1.5">
+            Webhook Secret / Endpoint Identifier
+          </label>
+          <input 
+            id="connectApiSecret" 
+            type="text" 
+            placeholder="whsec_..." 
+            class="w-full bg-slate-950 border border-slate-800 rounded-xl px-3.5 py-2.5 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-emerald-500 transition font-mono"
+          />
+        </div>
+
+        <div>
+          <label class="block text-xs font-semibold text-slate-300 mb-1.5">
+            Account Label / Custom Store Name <span class="text-slate-500 font-normal">(Optional)</span>
+          </label>
+          <input 
+            id="connectAccountName" 
+            type="text" 
+            placeholder="e.g. Primary Facebook Page / Shopify Store" 
+            class="w-full bg-slate-950 border border-slate-800 rounded-xl px-3.5 py-2.5 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-emerald-500 transition"
+          />
+        </div>
+
+        <div id="connectModalStatus" class="hidden text-xs p-3 rounded-xl"></div>
+      </div>
+
+      <div class="flex items-center justify-end gap-3 pt-3 border-t border-slate-800">
+        <button 
+          onclick="closeConnectModal()" 
+          class="px-4 py-2.5 rounded-xl border border-slate-700 text-slate-300 hover:text-white hover:bg-slate-800 text-xs font-semibold transition"
+        >
+          Cancel
+        </button>
+        <button 
+          id="btnSubmitConnect" 
+          onclick="submitConnectIntegration()" 
+          class="px-5 py-2.5 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 text-xs font-bold transition flex items-center gap-2 shadow-lg shadow-emerald-500/20"
+        >
+          <span>Verify & Connect</span>
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============================================================== -->
+  <!-- Request Integration Modal Dialog                               -->
+  <!-- ============================================================== -->
+  <div id="requestIntegrationModal" class="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/80 backdrop-blur-sm p-4 hidden">
+    <div class="bg-slate-900 border border-slate-700/80 rounded-2xl max-w-lg w-full p-6 shadow-2xl space-y-5 animate-in fade-in zoom-in duration-150">
+      <div class="flex items-start justify-between border-b border-slate-800 pb-3">
+        <div class="flex items-center gap-3">
+          <div class="w-10 h-10 rounded-xl bg-slate-800 text-emerald-400 border border-slate-700 flex items-center justify-center shadow-inner">
+            <i data-lucide="plus-circle" class="w-5 h-5"></i>
+          </div>
+          <div>
+            <h3 class="text-base font-bold text-white">Request a New Integration</h3>
+            <p class="text-xs text-slate-400">Tell us which tool, CRM, or channel you would like to connect.</p>
+          </div>
+        </div>
+        <button onclick="closeRequestIntegrationModal()" class="text-slate-400 hover:text-white p-1 rounded-lg hover:bg-slate-800 transition">
+          <i data-lucide="x" class="w-5 h-5"></i>
+        </button>
+      </div>
+
+      <div class="space-y-4">
+        <div>
+          <label class="block text-xs font-semibold text-slate-300 mb-1.5">
+            Application Name <span class="text-emerald-400">*</span>
+          </label>
+          <input 
+            id="requestAppName" 
+            type="text" 
+            placeholder="e.g. HubSpot, Notion, Zendesk, Slack..." 
+            class="w-full bg-slate-950 border border-slate-800 rounded-xl px-3.5 py-2.5 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-emerald-500 transition"
+          />
+        </div>
+
+        <div>
+          <label class="block text-xs font-semibold text-slate-300 mb-1.5">Category</label>
+          <select 
+            id="requestCategory" 
+            class="w-full bg-slate-950 border border-slate-800 rounded-xl px-3.5 py-2.5 text-xs text-white focus:outline-none focus:border-emerald-500 transition"
+          >
+            <option value="messaging">Messaging & Channels</option>
+            <option value="calendar">Calendars</option>
+            <option value="meeting">Meetings & Video</option>
+            <option value="ecommerce">E-Commerce Stores</option>
+            <option value="productivity" selected>Productivity & CRM</option>
+            <option value="other">Other Tool / API</option>
+          </select>
+        </div>
+
+        <div>
+          <label class="block text-xs font-semibold text-slate-300 mb-1.5">
+            Use Case & Workflow Details
+          </label>
+          <textarea 
+            id="requestUseCase" 
+            rows="3" 
+            placeholder="Describe what data your autonomous AI agent should read or trigger..." 
+            class="w-full bg-slate-950 border border-slate-800 rounded-xl px-3.5 py-2 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-emerald-500 transition resize-none"
+          ></textarea>
+        </div>
+
+        <div>
+          <label class="block text-xs font-semibold text-slate-300 mb-1.5">
+            Contact Email <span class="text-slate-500 font-normal">(for status updates)</span>
+          </label>
+          <input 
+            id="requestEmail" 
+            type="email" 
+            placeholder="admin@example.com" 
+            class="w-full bg-slate-950 border border-slate-800 rounded-xl px-3.5 py-2.5 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-emerald-500 transition"
+          />
+        </div>
+
+        <div id="requestModalStatus" class="hidden text-xs p-3 rounded-xl"></div>
+      </div>
+
+      <div class="flex items-center justify-end gap-3 pt-3 border-t border-slate-800">
+        <button 
+          onclick="closeRequestIntegrationModal()" 
+          class="px-4 py-2.5 rounded-xl border border-slate-700 text-slate-300 hover:text-white hover:bg-slate-800 text-xs font-semibold transition"
+        >
+          Cancel
+        </button>
+        <button 
+          id="btnSubmitRequestIntegration" 
+          onclick="submitRequestIntegration()" 
+          class="px-5 py-2.5 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 text-xs font-bold transition flex items-center gap-2 shadow-lg shadow-emerald-500/20"
+        >
+          <span>Submit Request</span>
+        </button>
+      </div>
+    </div>
   </div>
 
   <script>
     lucide.createIcons();
 
-    let currentOrgId = "00000000-0000-0000-0000-000000000200";
-    let authToken = null;
+    // ------------------------------------------------------------------------
+    // Global Auth & Multi-Tenant State
+    // ------------------------------------------------------------------------
+    let currentUser = null;
+    let authToken = localStorage.getItem('gabster_auth_token') || null;
+    let currentOrgId = localStorage.getItem('gabster_current_org') || "00000000-0000-0000-0000-000000000200";
     let activeConvId = null;
     let conversationsCache = [];
     let contactsCache = [];
 
+    function showAuthModal(mode = 'login') {
+      const modal = document.getElementById('authModal');
+      if (modal) modal.classList.remove('hidden');
+      switchAuthMode(mode);
+      lucide.createIcons();
+    }
+
+    function hideAuthModal() {
+      const modal = document.getElementById('authModal');
+      if (modal) modal.classList.add('hidden');
+    }
+
+    function switchAuthMode(mode) {
+      const tabLogin = document.getElementById('authTabLogin');
+      const tabRegister = document.getElementById('authTabRegister');
+      const formLogin = document.getElementById('signInForm');
+      const formRegister = document.getElementById('signUpForm');
+
+      if (mode === 'login') {
+        tabLogin.className = "flex-1 py-2 text-xs font-bold rounded-lg transition bg-emerald-500 text-slate-950 shadow-sm";
+        tabRegister.className = "flex-1 py-2 text-xs font-bold rounded-lg transition text-slate-400 hover:text-white";
+        formLogin.classList.remove('hidden');
+        formRegister.classList.add('hidden');
+      } else {
+        tabRegister.className = "flex-1 py-2 text-xs font-bold rounded-lg transition bg-emerald-500 text-slate-950 shadow-sm";
+        tabLogin.className = "flex-1 py-2 text-xs font-bold rounded-lg transition text-slate-400 hover:text-white";
+        formRegister.classList.remove('hidden');
+        formLogin.classList.add('hidden');
+      }
+      lucide.createIcons();
+    }
+
+    function fillDemoCredentials() {
+      document.getElementById('loginEmail').value = 'admin@gabster.ai';
+      document.getElementById('loginPassword').value = 'Password123!';
+    }
+
+    async function submitLogin(e) {
+      e.preventDefault();
+      const email = document.getElementById('loginEmail').value.trim();
+      const password = document.getElementById('loginPassword').value;
+      const statusDiv = document.getElementById('loginStatus');
+      const submitBtn = document.getElementById('btnLoginSubmit');
+
+      if (!email || !password) return;
+
+      submitBtn.disabled = true;
+      submitBtn.innerHTML = `<i data-lucide="loader-2" class="w-4 h-4 animate-spin"></i><span>Authenticating...</span>`;
+      statusDiv.className = 'hidden text-xs p-3 rounded-xl';
+      lucide.createIcons();
+
+      try {
+        const res = await fetch('/api/v1/auth/login', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ email, password })
+        });
+        const data = await res.json();
+        if (data.success && data.data) {
+          authToken = data.data.access_token;
+          if (data.data.organization_id) {
+            currentOrgId = data.data.organization_id;
+          }
+          localStorage.setItem('gabster_auth_token', authToken);
+          localStorage.setItem('gabster_current_org', currentOrgId);
+
+          statusDiv.className = 'text-xs p-3 rounded-xl bg-emerald-950/80 border border-emerald-500/40 text-emerald-300 block';
+          statusDiv.innerHTML = `✅ Authenticated successfully! Loading workspace...`;
+
+          setTimeout(async () => {
+            hideAuthModal();
+            await bootDashboard();
+          }, 500);
+        } else {
+          statusDiv.className = 'text-xs p-3 rounded-xl bg-rose-950/80 border border-rose-500/40 text-rose-300 block';
+          statusDiv.textContent = data.error?.message || data.detail || 'Invalid email or password.';
+        }
+      } catch (err) {
+        statusDiv.className = 'text-xs p-3 rounded-xl bg-rose-950/80 border border-rose-500/40 text-rose-300 block';
+        statusDiv.textContent = `Login failed: ${err.message}`;
+      } finally {
+        submitBtn.disabled = false;
+        submitBtn.innerHTML = `<span>Sign In to Workspace</span>`;
+      }
+    }
+
+    async function submitRegister(e) {
+      e.preventDefault();
+      const fullName = document.getElementById('registerFullName').value.trim();
+      const email = document.getElementById('registerEmail').value.trim();
+      const orgName = document.getElementById('registerOrgName').value.trim();
+      const password = document.getElementById('registerPassword').value;
+      const statusDiv = document.getElementById('registerStatus');
+      const submitBtn = document.getElementById('btnRegisterSubmit');
+
+      if (!fullName || !email || !orgName || !password) return;
+
+      submitBtn.disabled = true;
+      submitBtn.innerHTML = `<i data-lucide="loader-2" class="w-4 h-4 animate-spin"></i><span>Provisioning Workspace...</span>`;
+      statusDiv.className = 'hidden text-xs p-3 rounded-xl';
+      lucide.createIcons();
+
+      try {
+        const res = await fetch('/api/v1/auth/register', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            full_name: fullName,
+            email: email,
+            organization_name: orgName,
+            password: password
+          })
+        });
+        const data = await res.json();
+        if (data.success && data.data) {
+          authToken = data.data.access_token;
+          if (data.data.organization_id) {
+            currentOrgId = data.data.organization_id;
+          }
+          localStorage.setItem('gabster_auth_token', authToken);
+          localStorage.setItem('gabster_current_org', currentOrgId);
+
+          statusDiv.className = 'text-xs p-3 rounded-xl bg-emerald-950/80 border border-emerald-500/40 text-emerald-300 block';
+          statusDiv.innerHTML = `🎉 Welcome, ${fullName}! Workspace provisioned with 10,000 free starter credits.`;
+
+          setTimeout(async () => {
+            hideAuthModal();
+            await bootDashboard();
+          }, 800);
+        } else {
+          statusDiv.className = 'text-xs p-3 rounded-xl bg-rose-950/80 border border-rose-500/40 text-rose-300 block';
+          statusDiv.textContent = data.error?.message || data.detail || 'Registration failed. Check inputs.';
+        }
+      } catch (err) {
+        statusDiv.className = 'text-xs p-3 rounded-xl bg-rose-950/80 border border-rose-500/40 text-rose-300 block';
+        statusDiv.textContent = `Registration error: ${err.message}`;
+      } finally {
+        submitBtn.disabled = false;
+        submitBtn.innerHTML = `<span>Create Workspace & Start Free</span>`;
+      }
+    }
+
+    async function handleLogout() {
+      if (window._livePollTimer) {
+        clearInterval(window._livePollTimer);
+        window._livePollTimer = null;
+      }
+
+      if (authToken) {
+        try {
+          await fetch('/api/v1/auth/logout', {
+            method: 'POST',
+            headers: { 'Authorization': `Bearer ${authToken}` }
+          });
+        } catch (e) {
+          console.warn("Logout request:", e);
+        }
+      }
+
+      authToken = null;
+      currentUser = null;
+      localStorage.removeItem('gabster_auth_token');
+      localStorage.removeItem('gabster_current_org');
+
+      // Reset UI Header
+      const avatarEl = document.getElementById('userAvatarInitials');
+      if (avatarEl) avatarEl.textContent = '??';
+      const nameEl = document.getElementById('userNameDisplay');
+      if (nameEl) nameEl.textContent = 'Guest';
+      const emailEl = document.getElementById('userEmailDisplay');
+      if (emailEl) emailEl.textContent = 'Signed Out';
+
+      showAuthModal('login');
+    }
+
+    async function fetchUserProfile() {
+      if (!authToken) return false;
+      try {
+        const res = await fetch('/api/v1/auth/me', {
+          headers: { 'Authorization': `Bearer ${authToken}` }
+        });
+        const data = await res.json();
+        if (data.success && data.data) {
+          currentUser = data.data;
+
+          // Update header avatar initials and name
+          const names = (currentUser.full_name || 'Admin').trim().split(' ');
+          const initials = (names[0][0] + (names.length > 1 ? names[names.length - 1][0] : '')).toUpperCase();
+          const avatarEl = document.getElementById('userAvatarInitials');
+          if (avatarEl) avatarEl.textContent = initials;
+          const nameEl = document.getElementById('userNameDisplay');
+          if (nameEl) nameEl.textContent = currentUser.full_name || 'Staff User';
+          const emailEl = document.getElementById('userEmailDisplay');
+          if (emailEl) emailEl.innerHTML = `● ${currentUser.role || 'Member'}`;
+
+          // Populate workspace dropdown
+          if (currentUser.organizations && currentUser.organizations.length > 0) {
+            const wsSelect = document.getElementById('workspaceSelect');
+            if (wsSelect) {
+              wsSelect.innerHTML = currentUser.organizations.map(org => {
+                const isSelected = (org.id === currentOrgId) ? 'selected' : '';
+                return `<option value="${org.id}" class="bg-slate-900 text-white" ${isSelected}>${org.name}</option>`;
+              }).join('');
+              if (!currentUser.organizations.some(o => o.id === currentOrgId)) {
+                currentOrgId = currentUser.organizations[0].id;
+                localStorage.setItem('gabster_current_org', currentOrgId);
+              }
+            }
+          }
+
+          return true;
+        } else {
+          return false;
+        }
+      } catch (err) {
+        console.error("Failed to fetch user profile:", err);
+        return false;
+      }
+    }
+
     async function switchWorkspace(orgId) {
       currentOrgId = orgId;
+      localStorage.setItem('gabster_current_org', currentOrgId);
       activeConvId = null;
-      await initApp();
+      await bootDashboard();
+    }
+
+    async function bootDashboard() {
+      const valid = await fetchUserProfile();
+      if (!valid) {
+        handleLogout();
+        return;
+      }
+
+      // Fetch live domains
+      fetchLiveCredits();
+      fetchLiveConversations();
+      fetchLiveContacts();
+      loadKnowledgeBaseData();
+      loadIntegrationsData();
+
+      // Background live polling
+      if (window._livePollTimer) clearInterval(window._livePollTimer);
+      window._livePollTimer = setInterval(async () => {
+        if (authToken) {
+          await fetchLiveConversations(true);
+          if (activeConvId) {
+            await fetchLiveMessages(activeConvId, false);
+          }
+          await fetchLiveCredits();
+        }
+      }, 2500);
     }
 
     async function initApp() {
-      try {
-        // 1. Authenticate with backend API for selected workspace
-        const authRes = await fetch('/api/v1/auth/login', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ 
-            email: 'admin@gabster.ai', 
-            password: 'Password123!',
-            organization_id: currentOrgId
-          })
-        });
-        const authData = await authRes.json();
-        if (authData.success && authData.data) {
-          authToken = authData.data.access_token;
-          console.log("Authenticated successfully with Gabster AI API for org:", currentOrgId);
-          
-          // 2. Fetch live Credit Balance
-          fetchLiveCredits();
-          
-          // 3. Fetch live Conversations
-          fetchLiveConversations();
-          
-          // 4. Fetch live CRM Contacts
-          fetchLiveContacts();
-
-          // 5. Fetch live Knowledge Base & Ingested Documents
-          loadKnowledgeBaseData();
-
-          // 5. Real-time background polling every 2.5s
-          if (window._livePollTimer) clearInterval(window._livePollTimer);
-          window._livePollTimer = setInterval(async () => {
-            if (authToken) {
-              await fetchLiveConversations(true);
-              if (activeConvId) {
-                await fetchLiveMessages(activeConvId, false);
-              }
-              await fetchLiveCredits();
-            }
-          }, 2500);
+      if (authToken) {
+        const ok = await fetchUserProfile();
+        if (ok) {
+          hideAuthModal();
+          await bootDashboard();
+          return;
         }
-      } catch (err) {
-        console.warn("Using offline demo fallback:", err);
       }
+      showAuthModal('login');
     }
 
     async function fetchLiveCredits() {
@@ -842,21 +1925,31 @@
     }
 
     function switchTab(tabId) {
-      const tabs = ['inbox', 'contacts', 'agents', 'rag', 'campaigns', 'billing'];
+      const tabs = ['inbox', 'contacts', 'agents', 'rag', 'campaigns', 'billing', 'integrations'];
       tabs.forEach(t => {
-        document.getElementById(`tab-${t}`).classList.add('hidden');
+        const tabEl = document.getElementById(`tab-${t}`);
+        if (tabEl) tabEl.classList.add('hidden');
         const navBtn = document.getElementById(`nav-${t}`);
-        navBtn.classList.remove('bg-emerald-500/10', 'text-emerald-400', 'border', 'border-emerald-500/20', 'font-semibold');
-        navBtn.classList.add('text-slate-400', 'font-medium');
+        if (navBtn) {
+          navBtn.classList.remove('bg-emerald-500/10', 'text-emerald-400', 'border', 'border-emerald-500/20', 'font-semibold');
+          navBtn.classList.add('text-slate-400', 'font-medium');
+        }
       });
 
-      document.getElementById(`tab-${tabId}`).classList.remove('hidden');
+      const activeTabEl = document.getElementById(`tab-${tabId}`);
+      if (activeTabEl) activeTabEl.classList.remove('hidden');
       const activeNav = document.getElementById(`nav-${tabId}`);
-      activeNav.classList.add('bg-emerald-500/10', 'text-emerald-400', 'border', 'border-emerald-500/20', 'font-semibold');
-      activeNav.classList.remove('text-slate-400', 'font-medium');
+      if (activeNav) {
+        activeNav.classList.add('bg-emerald-500/10', 'text-emerald-400', 'border', 'border-emerald-500/20', 'font-semibold');
+        activeNav.classList.remove('text-slate-400', 'font-medium');
+      }
 
       if (tabId === 'rag') {
         loadKnowledgeBaseData();
+      } else if (tabId === 'integrations') {
+        loadIntegrationsData();
+      } else if (tabId === 'agents') {
+        loadInstructionBuilderData();
       }
     }
 
@@ -1009,6 +2102,7 @@
             <tr><td colspan="6" class="py-4 text-center text-slate-500 italic">No Knowledge Base configured yet.</td></tr>
           `;
         }
+        await loadKnowledgeGaps();
       } catch (err) {
         console.error("Failed to load Knowledge Base:", err);
       }
@@ -1204,6 +2298,1216 @@
         box.innerHTML = `<p class="text-rose-400">Search error: ${err.message}</p>`;
       } finally {
         btn.disabled = false;
+      }
+    }
+
+    // ------------------------------------------------------------------------
+    // Integrations & Connected Applications
+    // ------------------------------------------------------------------------
+    let integrationsList = [];
+    let currentIntegrationCategory = 'all';
+    let integrationSearchQuery = '';
+    let selectedAppToConnect = null;
+
+    async function loadIntegrationsData() {
+      if (!authToken) return;
+      try {
+        const res = await fetch('/api/v1/integrations', {
+          headers: { 'Authorization': `Bearer ${authToken}` }
+        });
+        const json = await res.json();
+        if (json.success && json.data) {
+          integrationsList = json.data.integrations || [];
+          
+          // Update Category Counters
+          const counts = json.data.category_counts || {};
+          const catAllEl = document.getElementById('cat-count-all');
+          if (catAllEl) catAllEl.textContent = json.data.total_count || integrationsList.length;
+          
+          const catMsgEl = document.getElementById('cat-count-messaging');
+          if (catMsgEl) catMsgEl.textContent = counts['messaging'] !== undefined ? counts['messaging'] : 6;
+          
+          const catCalEl = document.getElementById('cat-count-calendar');
+          if (catCalEl) catCalEl.textContent = counts['calendar'] !== undefined ? counts['calendar'] : 3;
+          
+          const catMeetEl = document.getElementById('cat-count-meeting');
+          if (catMeetEl) catMeetEl.textContent = counts['meeting'] !== undefined ? counts['meeting'] : 1;
+          
+          const catEcomEl = document.getElementById('cat-count-ecommerce');
+          if (catEcomEl) catEcomEl.textContent = counts['ecommerce'] !== undefined ? counts['ecommerce'] : 2;
+          
+          const catProdEl = document.getElementById('cat-count-productivity');
+          if (catProdEl) catProdEl.textContent = counts['productivity'] !== undefined ? counts['productivity'] : 1;
+          
+          const badgeEl = document.getElementById('badgeIntegrationsCount');
+          if (badgeEl) badgeEl.textContent = json.data.total_count || 13;
+
+          filterAndRenderIntegrations();
+        }
+      } catch (err) {
+        console.error("Failed to load integrations:", err);
+      }
+    }
+
+    function setIntegrationsCategory(category) {
+      currentIntegrationCategory = category;
+      const cats = ['all', 'messaging', 'calendar', 'meeting', 'ecommerce', 'productivity'];
+      cats.forEach(c => {
+        const btn = document.getElementById(`cat-btn-${c}`);
+        if (!btn) return;
+        if (c === category) {
+          btn.className = "px-3.5 py-1.5 rounded-lg text-xs font-semibold bg-emerald-500 text-slate-950 transition flex items-center gap-2 shrink-0 shadow-sm";
+          const cnt = document.getElementById(`cat-count-${c}`);
+          if (cnt) cnt.className = "px-1.5 py-0.2 rounded-md bg-slate-950/20 text-slate-950 text-[10px] font-bold";
+        } else {
+          btn.className = "px-3.5 py-1.5 rounded-lg text-xs font-medium bg-slate-900 border border-slate-800 text-slate-400 hover:text-white hover:bg-slate-800 transition flex items-center gap-2 shrink-0";
+          const cnt = document.getElementById(`cat-count-${c}`);
+          if (cnt) cnt.className = "px-1.5 py-0.2 rounded-md bg-slate-800 text-slate-300 text-[10px] font-bold";
+        }
+      });
+      filterAndRenderIntegrations();
+    }
+
+    function onIntegrationSearch(query) {
+      integrationSearchQuery = (query || '').toLowerCase().trim();
+      filterAndRenderIntegrations();
+    }
+
+    function filterAndRenderIntegrations() {
+      const grid = document.getElementById('integrationsGrid');
+      const counterEl = document.getElementById('availableIntegrationsCount');
+      if (!grid) return;
+
+      const filtered = integrationsList.filter(item => {
+        // Category filter
+        const matchCategory = (currentIntegrationCategory === 'all') || (item.category === currentIntegrationCategory);
+        // Search filter
+        const matchSearch = !integrationSearchQuery || 
+          (item.name && item.name.toLowerCase().includes(integrationSearchQuery)) ||
+          (item.description && item.description.toLowerCase().includes(integrationSearchQuery)) ||
+          (item.category_label && item.category_label.toLowerCase().includes(integrationSearchQuery)) ||
+          (item.slug && item.slug.toLowerCase().includes(integrationSearchQuery));
+        return matchCategory && matchSearch;
+      });
+
+      if (counterEl) {
+        counterEl.textContent = filtered.length;
+      }
+
+      if (filtered.length === 0) {
+        grid.innerHTML = `
+          <div class="col-span-full py-12 text-center bg-slate-900/40 rounded-2xl border border-dashed border-slate-800">
+            <i data-lucide="search-x" class="w-10 h-10 text-slate-600 mx-auto mb-3"></i>
+            <h4 class="text-sm font-semibold text-slate-300">No matching integrations found</h4>
+            <p class="text-xs text-slate-500 mt-1">Try searching another keyword or request a custom integration.</p>
+            <button onclick="openRequestIntegrationModal()" class="mt-4 px-3.5 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-emerald-400 text-xs font-bold transition inline-flex items-center gap-1.5 border border-slate-700">
+              <i data-lucide="plus-circle" class="w-4 h-4"></i> Request Integration
+            </button>
+          </div>
+        `;
+        lucide.createIcons();
+        return;
+      }
+
+      grid.innerHTML = filtered.map(item => {
+        const isConn = item.is_connected;
+        const iconName = item.icon || 'blocks';
+        
+        const statusBadge = isConn 
+          ? `<span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-semibold bg-emerald-500/15 text-emerald-400 border border-emerald-500/30">
+               <span class="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span>
+               Connected
+             </span>`
+          : `<span class="inline-flex items-center px-2 py-0.5 rounded-md text-[10px] font-medium bg-slate-800 text-slate-400 border border-slate-700/60">
+               Available
+             </span>`;
+
+        const actionBtn = isConn
+          ? `<button onclick="disconnectIntegration('${item.slug}')" class="px-3 py-1.5 rounded-lg border border-rose-500/30 hover:border-rose-500 bg-rose-500/10 hover:bg-rose-500/20 text-rose-400 text-xs font-semibold transition flex items-center gap-1.5">
+               <i data-lucide="power-off" class="w-3.5 h-3.5"></i>
+               <span>Disconnect</span>
+             </button>`
+          : `<button onclick="openConnectModal('${item.slug}')" class="px-3.5 py-1.5 rounded-lg bg-emerald-500 hover:bg-emerald-400 text-slate-950 text-xs font-bold transition flex items-center gap-1.5 shadow-md shadow-emerald-500/10">
+               <i data-lucide="link-2" class="w-3.5 h-3.5"></i>
+               <span>Connect</span>
+             </button>`;
+
+        const accountInfo = (isConn && item.account_identifier)
+          ? `<div class="text-[11px] text-emerald-400/90 font-mono truncate bg-emerald-950/40 px-2 py-1 rounded-md border border-emerald-900/50 flex items-center gap-1.5">
+               <i data-lucide="check-circle" class="w-3 h-3 text-emerald-400 shrink-0"></i>
+               <span class="truncate">${item.account_identifier}</span>
+             </div>`
+          : '';
+
+        return `
+          <div class="bg-slate-900/70 border ${isConn ? 'border-emerald-500/40 shadow-lg shadow-emerald-950/20' : 'border-slate-800/80'} rounded-2xl p-5 hover:border-slate-700 transition flex flex-col justify-between space-y-4 group">
+            <div class="space-y-3">
+              <!-- Top Row: Icon & Status -->
+              <div class="flex items-start justify-between gap-3">
+                <div class="w-11 h-11 rounded-xl ${isConn ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/30' : 'bg-slate-800/80 text-white border-slate-700'} border flex items-center justify-center shrink-0 shadow-inner group-hover:scale-105 transition">
+                  <i data-lucide="${iconName}" class="w-5 h-5"></i>
+                </div>
+                ${statusBadge}
+              </div>
+
+              <!-- Name & Description -->
+              <div>
+                <h3 class="text-sm font-bold text-white group-hover:text-emerald-400 transition">${item.name}</h3>
+                <p class="text-xs text-slate-400 leading-relaxed mt-1 line-clamp-2">${item.description}</p>
+              </div>
+
+              ${accountInfo}
+            </div>
+
+            <!-- Bottom Row: Category Badge & Action Button -->
+            <div class="flex items-center justify-between pt-3 border-t border-slate-800/80">
+              <span class="px-2 py-0.5 rounded-md text-[10px] font-semibold uppercase tracking-wider bg-slate-800/80 text-slate-400 border border-slate-700/50">
+                ${item.badge_label || item.category}
+              </span>
+              ${actionBtn}
+            </div>
+          </div>
+        `;
+      }).join('');
+
+      lucide.createIcons();
+    }
+
+    function openConnectModal(slug) {
+      selectedAppToConnect = integrationsList.find(i => i.slug === slug);
+      if (!selectedAppToConnect) {
+        console.error("Application not found:", slug);
+        return;
+      }
+
+      document.getElementById('connectModalAppName').textContent = selectedAppToConnect.name;
+      
+      const iconEl = document.getElementById('connectModalIcon');
+      if (iconEl) {
+        iconEl.setAttribute('data-lucide', selectedAppToConnect.icon || 'blocks');
+      }
+
+      // Dynamic labels and placeholders based on application
+      const keyLabel = document.getElementById('connectApiKeyLabel');
+      const keyInput = document.getElementById('connectApiKey');
+      const secretLabel = document.getElementById('connectApiSecretLabel');
+      const secretInput = document.getElementById('connectApiSecret');
+      const accNameInput = document.getElementById('connectAccountName');
+      const statusDiv = document.getElementById('connectModalStatus');
+
+      keyInput.value = '';
+      secretInput.value = '';
+      accNameInput.value = '';
+      statusDiv.className = 'hidden text-xs p-3 rounded-xl';
+      statusDiv.innerHTML = '';
+
+      if (slug === 'whatsapp') {
+        keyLabel.innerHTML = `Meta Permanent Token / System Token <span class="text-emerald-400">*</span>`;
+        keyInput.placeholder = 'EAAG... (Meta Cloud API System User Token)';
+        secretLabel.textContent = 'Phone Number ID';
+        secretInput.placeholder = 'e.g. 1402413542949034';
+      } else if (slug === 'messenger') {
+        keyLabel.innerHTML = `Page Access Token <span class="text-emerald-400">*</span>`;
+        keyInput.placeholder = 'Enter API Key / Access Token...';
+        secretLabel.textContent = 'Webhook Secret / Endpoint Identifier';
+        secretInput.placeholder = 'whsec_... or Facebook Page ID';
+      } else if (slug === 'instagram') {
+        keyLabel.innerHTML = `Instagram Access Token <span class="text-emerald-400">*</span>`;
+        keyInput.placeholder = 'IGAA... (User or Page Access Token)';
+        secretLabel.textContent = 'Instagram Account ID / Username';
+        secretInput.placeholder = 'e.g. 29004906199152162';
+      } else if (slug === 'telegram') {
+        keyLabel.innerHTML = `Bot API Token <span class="text-emerald-400">*</span>`;
+        keyInput.placeholder = 'e.g. 123456789:ABCdefGhIJKlmNoPQRsTUVwxyZ';
+        secretLabel.textContent = 'Bot Username';
+        secretInput.placeholder = 'e.g. @MySupportBot';
+      } else if (slug === 'shopify') {
+        keyLabel.innerHTML = `Admin API Access Token <span class="text-emerald-400">*</span>`;
+        keyInput.placeholder = 'shpat_...';
+        secretLabel.textContent = 'Store Domain';
+        secretInput.placeholder = 'e.g. my-store.myshopify.com';
+      } else if (slug === 'woocommerce') {
+        keyLabel.innerHTML = `Consumer Secret <span class="text-emerald-400">*</span>`;
+        keyInput.placeholder = 'cs_...';
+        secretLabel.textContent = 'Store URL & Consumer Key';
+        secretInput.placeholder = 'https://shop.com | ck_...';
+      } else if (slug === 'google_calendar') {
+        keyLabel.innerHTML = `OAuth Client Secret / Service Account JSON <span class="text-emerald-400">*</span>`;
+        keyInput.placeholder = 'Paste JSON key or Client Secret';
+        secretLabel.textContent = 'Calendar ID';
+        secretInput.placeholder = 'primary or calendar-id@group.calendar.google.com';
+      } else {
+        keyLabel.innerHTML = `API Key / Token <span class="text-emerald-400">*</span>`;
+        keyInput.placeholder = 'Enter API Key / Access Token...';
+        secretLabel.textContent = 'Webhook Secret / Endpoint Identifier';
+        secretInput.placeholder = 'whsec_...';
+      }
+
+      document.getElementById('connectIntegrationModal').classList.remove('hidden');
+      lucide.createIcons();
+    }
+
+    function closeConnectModal() {
+      document.getElementById('connectIntegrationModal').classList.add('hidden');
+    }
+
+    async function submitConnectIntegration() {
+      if (!selectedAppToConnect) return;
+      const apiKey = document.getElementById('connectApiKey').value.trim();
+      const secret = document.getElementById('connectApiSecret').value.trim();
+      const accountName = document.getElementById('connectAccountName').value.trim();
+      const statusDiv = document.getElementById('connectModalStatus');
+      const submitBtn = document.getElementById('btnSubmitConnect');
+
+      if (!apiKey) {
+        statusDiv.className = 'text-xs p-3 rounded-xl bg-rose-950/80 border border-rose-500/40 text-rose-300 block';
+        statusDiv.textContent = 'Please enter the API Key or Access Token.';
+        return;
+      }
+
+      submitBtn.disabled = true;
+      submitBtn.innerHTML = `<i data-lucide="loader-2" class="w-4 h-4 animate-spin"></i><span>Verifying...</span>`;
+      lucide.createIcons();
+
+      try {
+        const res = await fetch('/api/v1/integrations/connect', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${authToken}`
+          },
+          body: JSON.stringify({
+            app_slug: selectedAppToConnect.slug,
+            api_key_or_token: apiKey,
+            endpoint_or_secret: secret || null,
+            account_name: accountName || null
+          })
+        });
+        const json = await res.json();
+        if (json.success) {
+          statusDiv.className = 'text-xs p-3 rounded-xl bg-emerald-950/80 border border-emerald-500/40 text-emerald-300 block';
+          statusDiv.innerHTML = `✅ <strong>${selectedAppToConnect.name}</strong> verified and connected successfully!`;
+          setTimeout(() => {
+            closeConnectModal();
+            loadIntegrationsData();
+          }, 1000);
+        } else {
+          statusDiv.className = 'text-xs p-3 rounded-xl bg-rose-950/80 border border-rose-500/40 text-rose-300 block';
+          statusDiv.textContent = `Error: ${json.error?.message || json.detail || 'Connection failed'}`;
+        }
+      } catch (err) {
+        statusDiv.className = 'text-xs p-3 rounded-xl bg-rose-950/80 border border-rose-500/40 text-rose-300 block';
+        statusDiv.textContent = `Network Error: ${err.message}`;
+      } finally {
+        submitBtn.disabled = false;
+        submitBtn.innerHTML = `<span>Verify & Connect</span>`;
+      }
+    }
+
+    async function disconnectIntegration(slug) {
+      const item = integrationsList.find(i => i.slug === slug);
+      const appName = item ? item.name : slug;
+      if (!confirm(`Are you sure you want to disconnect ${appName}? Your autonomous agent will stop syncing with this application.`)) {
+        return;
+      }
+      try {
+        const res = await fetch(`/api/v1/integrations/${slug}/disconnect`, {
+          method: 'POST',
+          headers: { 'Authorization': `Bearer ${authToken}` }
+        });
+        const json = await res.json();
+        if (json.success) {
+          await loadIntegrationsData();
+        } else {
+          alert(`Failed to disconnect: ${json.error?.message || json.detail}`);
+        }
+      } catch (err) {
+        alert(`Error: ${err.message}`);
+      }
+    }
+
+    function openRequestIntegrationModal() {
+      document.getElementById('requestAppName').value = '';
+      document.getElementById('requestUseCase').value = '';
+      document.getElementById('requestEmail').value = '';
+      const statusDiv = document.getElementById('requestModalStatus');
+      statusDiv.className = 'hidden text-xs p-3 rounded-xl';
+      document.getElementById('requestIntegrationModal').classList.remove('hidden');
+      lucide.createIcons();
+    }
+
+    function closeRequestIntegrationModal() {
+      document.getElementById('requestIntegrationModal').classList.add('hidden');
+    }
+
+    async function submitRequestIntegration() {
+      const name = document.getElementById('requestAppName').value.trim();
+      const category = document.getElementById('requestCategory').value;
+      const useCase = document.getElementById('requestUseCase').value.trim();
+      const email = document.getElementById('requestEmail').value.trim();
+      const statusDiv = document.getElementById('requestModalStatus');
+      const submitBtn = document.getElementById('btnSubmitRequestIntegration');
+
+      if (!name) {
+        statusDiv.className = 'text-xs p-3 rounded-xl bg-rose-950/80 border border-rose-500/40 text-rose-300 block';
+        statusDiv.textContent = 'Please specify the application name.';
+        return;
+      }
+
+      submitBtn.disabled = true;
+      submitBtn.innerHTML = `<i data-lucide="loader-2" class="w-4 h-4 animate-spin"></i><span>Submitting...</span>`;
+      lucide.createIcons();
+
+      try {
+        const res = await fetch('/api/v1/integrations/request', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${authToken}`
+          },
+          body: JSON.stringify({
+            name: name,
+            category: category,
+            use_case: useCase || null,
+            contact_email: email || null
+          })
+        });
+        const json = await res.json();
+        if (json.success) {
+          statusDiv.className = 'text-xs p-3 rounded-xl bg-emerald-950/80 border border-emerald-500/40 text-emerald-300 block';
+          statusDiv.innerHTML = `✅ Thank you! Your request for <strong>${name}</strong> has been logged.`;
+          setTimeout(() => {
+            closeRequestIntegrationModal();
+          }, 1200);
+        } else {
+          statusDiv.className = 'text-xs p-3 rounded-xl bg-rose-950/80 border border-rose-500/40 text-rose-300 block';
+          statusDiv.textContent = `Error: ${json.error?.message || json.detail || 'Submission failed'}`;
+        }
+      } catch (err) {
+        statusDiv.className = 'text-xs p-3 rounded-xl bg-rose-950/80 border border-rose-500/40 text-rose-300 block';
+        statusDiv.textContent = `Error: ${err.message}`;
+      } finally {
+        submitBtn.disabled = false;
+        submitBtn.innerHTML = `<span>Submit Request</span>`;
+      }
+    }
+
+    // ==============================================================================
+    // AI AGENT INSTRUCTION BUILDER STUDIO JAVASCRIPT
+    // ==============================================================================
+    let currentAgentStudioState = {
+      agent_id: null,
+      rules: [],
+      constraints: [],
+      presets: {}
+    };
+
+    async function loadInstructionBuilderData() {
+      try {
+        const res = await fetch('/api/v1/agents/instructions', {
+          headers: {
+            'Content-Type': 'application/json',
+            ...(authToken ? { 'Authorization': `Bearer ${authToken}` } : {})
+          }
+        });
+        const json = await res.json();
+        if (json.success && json.data) {
+          const data = json.data;
+          currentAgentStudioState.presets = data.presets || {};
+          
+          if (data.active_agent) {
+            currentAgentStudioState.agent_id = data.active_agent.id;
+            const badgeText = document.getElementById('builder-badge-text');
+            if (badgeText) {
+              const ver = data.current_version ? `v${data.current_version.version_number}` : 'v1';
+              badgeText.textContent = `Live Bot: ${data.active_agent.name} (${ver})`;
+            }
+          }
+
+          if (data.builder_payload) {
+            populateInstructionBuilder(data.builder_payload);
+          }
+          if (data.compiled_prompt) {
+            document.getElementById('builder-compiled-preview').value = data.compiled_prompt;
+            document.getElementById('builder-word-count').textContent = data.word_count || '0';
+            document.getElementById('builder-token-count').textContent = data.estimated_token_count || '0';
+          }
+        }
+      } catch (err) {
+        console.error('Failed to load instruction studio data:', err);
+      }
+    }
+
+    function populateInstructionBuilder(payload) {
+      if (!payload) return;
+      document.getElementById('builder-agent-name').value = payload.agent_name || '';
+      document.getElementById('builder-role-title').value = payload.role_title || '';
+      
+      const toneSelect = document.getElementById('builder-tone');
+      if (toneSelect && payload.tone_of_voice) {
+        let found = false;
+        for (let opt of toneSelect.options) {
+          if (opt.value.toLowerCase() === payload.tone_of_voice.toLowerCase()) {
+            opt.selected = true;
+            found = true;
+            break;
+          }
+        }
+        if (!found) {
+          toneSelect.options[0].selected = true;
+        }
+      }
+
+      const langSelect = document.getElementById('builder-language');
+      if (langSelect && payload.language) {
+        let found = false;
+        for (let opt of langSelect.options) {
+          if (opt.value.toLowerCase() === payload.language.toLowerCase()) {
+            opt.selected = true;
+            found = true;
+            break;
+          }
+        }
+        if (!found) {
+          langSelect.options[0].selected = true;
+        }
+      }
+
+      document.getElementById('builder-mission').value = payload.primary_mission || '';
+      document.getElementById('builder-escalation').value = payload.escalation_protocol || '';
+      document.getElementById('builder-greeting').value = payload.greeting_message || '';
+
+      const greetingBox = document.getElementById('sandbox-initial-greeting');
+      if (greetingBox && payload.greeting_message) {
+        greetingBox.textContent = payload.greeting_message;
+      }
+
+      currentAgentStudioState.rules = Array.isArray(payload.business_rules) ? [...payload.business_rules] : [];
+      currentAgentStudioState.constraints = Array.isArray(payload.constraints_donts) ? [...payload.constraints_donts] : [];
+
+      renderRulesList();
+      renderConstraintsList();
+      compileInstructionsLive();
+    }
+
+    function renderRulesList() {
+      const container = document.getElementById('builder-rules-list');
+      if (!container) return;
+      if (currentAgentStudioState.rules.length === 0) {
+        container.innerHTML = `<p class="text-[11px] text-slate-500 italic">No business rules defined yet. Add key operational policies above.</p>`;
+        return;
+      }
+      container.innerHTML = currentAgentStudioState.rules.map((rule, idx) => `
+        <div class="flex items-center justify-between p-2 rounded-xl bg-slate-950/70 border border-slate-800 text-xs text-slate-200 group hover:border-emerald-500/30 transition">
+          <div class="flex items-center gap-2 overflow-hidden">
+            <span class="w-1.5 h-1.5 rounded-full bg-emerald-400 shrink-0"></span>
+            <span class="truncate">${rule}</span>
+          </div>
+          <button type="button" onclick="removeBusinessRule(${idx})" class="text-slate-500 hover:text-rose-400 p-1 transition">
+            <i data-lucide="trash-2" class="w-3.5 h-3.5"></i>
+          </button>
+        </div>
+      `).join('');
+      if (window.lucide) lucide.createIcons();
+    }
+
+    function addBusinessRule() {
+      const input = document.getElementById('input-new-rule');
+      if (!input || !input.value.trim()) return;
+      currentAgentStudioState.rules.push(input.value.trim());
+      input.value = '';
+      renderRulesList();
+      compileInstructionsLive();
+    }
+
+    function removeBusinessRule(idx) {
+      currentAgentStudioState.rules.splice(idx, 1);
+      renderRulesList();
+      compileInstructionsLive();
+    }
+
+    function renderConstraintsList() {
+      const container = document.getElementById('builder-constraints-list');
+      if (!container) return;
+      if (currentAgentStudioState.constraints.length === 0) {
+        container.innerHTML = `<p class="text-[11px] text-slate-500 italic">No negative constraints defined yet. Add boundaries above.</p>`;
+        return;
+      }
+      container.innerHTML = currentAgentStudioState.constraints.map((constraint, idx) => `
+        <div class="flex items-center justify-between p-2 rounded-xl bg-slate-950/70 border border-slate-800 text-xs text-slate-200 group hover:border-rose-500/30 transition">
+          <div class="flex items-center gap-2 overflow-hidden">
+            <span class="w-1.5 h-1.5 rounded-full bg-rose-400 shrink-0"></span>
+            <span class="truncate">${constraint}</span>
+          </div>
+          <button type="button" onclick="removeConstraint(${idx})" class="text-slate-500 hover:text-rose-400 p-1 transition">
+            <i data-lucide="trash-2" class="w-3.5 h-3.5"></i>
+          </button>
+        </div>
+      `).join('');
+      if (window.lucide) lucide.createIcons();
+    }
+
+    function addConstraint() {
+      const input = document.getElementById('input-new-constraint');
+      if (!input || !input.value.trim()) return;
+      currentAgentStudioState.constraints.push(input.value.trim());
+      input.value = '';
+      renderConstraintsList();
+      compileInstructionsLive();
+    }
+
+    function removeConstraint(idx) {
+      currentAgentStudioState.constraints.splice(idx, 1);
+      renderConstraintsList();
+      compileInstructionsLive();
+    }
+
+    function selectInstructionPreset(presetKey) {
+      const presetObj = currentAgentStudioState.presets[presetKey];
+      if (presetObj && presetObj.payload) {
+        populateInstructionBuilder(presetObj.payload);
+      }
+    }
+
+    let compileDebounceTimer = null;
+    function compileInstructionsLive() {
+      clearTimeout(compileDebounceTimer);
+      compileDebounceTimer = setTimeout(async () => {
+        const payload = {
+          agent_id: currentAgentStudioState.agent_id,
+          agent_name: document.getElementById('builder-agent-name').value.trim() || 'AI Assistant',
+          role_title: document.getElementById('builder-role-title').value.trim() || 'Operations Specialist',
+          tone_of_voice: document.getElementById('builder-tone').value,
+          language: document.getElementById('builder-language').value,
+          primary_mission: document.getElementById('builder-mission').value.trim() || 'Help customers with their inquiries.',
+          business_rules: currentAgentStudioState.rules,
+          constraints_donts: currentAgentStudioState.constraints,
+          escalation_protocol: document.getElementById('builder-escalation').value.trim(),
+          greeting_message: document.getElementById('builder-greeting').value.trim()
+        };
+
+        try {
+          const res = await fetch('/api/v1/agents/instructions/compile', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              ...(authToken ? { 'Authorization': `Bearer ${authToken}` } : {})
+            },
+            body: JSON.stringify(payload)
+          });
+          const json = await res.json();
+          if (json.success && json.data) {
+            document.getElementById('builder-compiled-preview').value = json.data.compiled_prompt;
+            document.getElementById('builder-word-count').textContent = json.data.word_count;
+            document.getElementById('builder-token-count').textContent = json.data.estimated_token_count;
+          }
+        } catch (err) {
+          console.error('Failed to compile prompt preview:', err);
+        }
+      }, 250);
+    }
+
+    function copyCompiledPrompt() {
+      const text = document.getElementById('builder-compiled-preview').value;
+      if (!text) return;
+      navigator.clipboard.writeText(text).then(() => {
+        alert('✅ Compiled system prompt copied to clipboard!');
+      }).catch(err => {
+        console.error('Failed to copy prompt:', err);
+      });
+    }
+
+    // Modal AI Auto-Draft
+    function openAiDraftModal() {
+      const modal = document.getElementById('modal-ai-draft');
+      if (modal) modal.classList.remove('hidden');
+    }
+
+    function closeAiDraftModal() {
+      const modal = document.getElementById('modal-ai-draft');
+      if (modal) modal.classList.add('hidden');
+    }
+
+    async function executeAiDraft() {
+      const descInput = document.getElementById('ai-draft-desc');
+      const channelSelect = document.getElementById('ai-draft-channel');
+      const toneSelect = document.getElementById('ai-draft-tone');
+      const btn = document.getElementById('btn-execute-ai-draft');
+
+      if (!descInput || !descInput.value.trim()) {
+        alert('Please provide a short description of your business.');
+        return;
+      }
+
+      btn.disabled = true;
+      btn.innerHTML = `<span class="animate-spin mr-1">🌀</span> Drafting with AI...`;
+
+      try {
+        const res = await fetch('/api/v1/agents/instructions/generate', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            ...(authToken ? { 'Authorization': `Bearer ${authToken}` } : {})
+          },
+          body: JSON.stringify({
+            business_description: descInput.value.trim(),
+            target_channel: channelSelect.value,
+            tone_preference: toneSelect.value
+          })
+        });
+
+        const json = await res.json();
+        if (json.success && json.data) {
+          populateInstructionBuilder(json.data);
+          closeAiDraftModal();
+          alert('✨ Agent instructions successfully auto-generated with Google Gemini!');
+        } else {
+          alert('Failed to generate instructions: ' + (json.error?.message || 'Server error'));
+        }
+      } catch (err) {
+        alert('Error generating instructions: ' + err.message);
+      } finally {
+        btn.disabled = false;
+        btn.innerHTML = `<i data-lucide="sparkles" class="w-3.5 h-3.5"></i> <span>Generate Instructions</span>`;
+        if (window.lucide) lucide.createIcons();
+      }
+    }
+
+    // Interactive Test Sandbox Simulation
+    async function runSandboxTest(presetMsg) {
+      const inputEl = document.getElementById('sandbox-user-input');
+      const chatBox = document.getElementById('sandbox-chat-box');
+      const sendBtn = document.getElementById('btn-sandbox-send');
+      const draftPrompt = document.getElementById('builder-compiled-preview').value;
+
+      const userText = presetMsg || (inputEl ? inputEl.value.trim() : '');
+      if (!userText) return;
+
+      if (inputEl) inputEl.value = '';
+
+      // Append user bubble
+      chatBox.innerHTML += `
+        <div class="flex items-start justify-end gap-2">
+          <div class="bg-emerald-600/30 border border-emerald-500/40 p-2.5 rounded-xl rounded-tr-none max-w-[85%] text-slate-100">
+            ${userText}
+          </div>
+          <div class="w-6 h-6 rounded-lg bg-emerald-500 text-slate-950 flex items-center justify-center font-bold text-[10px]">
+            You
+          </div>
+        </div>
+      `;
+
+      // Append typing indicator
+      const typingId = 'typing-' + Date.now();
+      chatBox.innerHTML += `
+        <div id="${typingId}" class="flex items-start gap-2">
+          <div class="w-6 h-6 rounded-lg bg-emerald-500/20 text-emerald-400 flex items-center justify-center font-bold text-[10px]">
+            AI
+          </div>
+          <div class="bg-slate-900 border border-slate-800 p-2.5 rounded-xl rounded-tl-none max-w-[85%] text-slate-400 italic">
+            Thinking & grounding with RAG context...
+          </div>
+        </div>
+      `;
+      chatBox.scrollTop = chatBox.scrollHeight;
+
+      if (sendBtn) sendBtn.disabled = true;
+
+      try {
+        const res = await fetch('/api/v1/agents/instructions/test', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            ...(authToken ? { 'Authorization': `Bearer ${authToken}` } : {})
+          },
+          body: JSON.stringify({
+            test_message: userText,
+            draft_prompt: draftPrompt || "You are a helpful customer assistant."
+          })
+        });
+
+        const json = await res.json();
+        const typingEl = document.getElementById(typingId);
+        if (typingEl) typingEl.remove();
+
+        if (json.success && json.data) {
+          const reply = json.data.reply;
+          const sourceBadge = json.data.source === 'gemini_llm' ? '🤖 Gemini 1.5' : '⚡ Smart Simulation';
+          const chunksBadge = json.data.grounded_kb_chunks_count ? ` • 📚 ${json.data.grounded_kb_chunks_count} KB chunks` : '';
+          
+          chatBox.innerHTML += `
+            <div class="flex items-start gap-2">
+              <div class="w-6 h-6 rounded-lg bg-emerald-500/20 text-emerald-400 flex items-center justify-center font-bold text-[10px]">
+                AI
+              </div>
+              <div class="bg-slate-900 border border-slate-800 p-2.5 rounded-xl rounded-tl-none max-w-[85%] text-slate-200 space-y-1">
+                <div>${reply}</div>
+                <div class="text-[9px] text-slate-500 pt-1 border-t border-slate-800/80 font-mono">${sourceBadge}${chunksBadge}</div>
+              </div>
+            </div>
+          `;
+        } else {
+          chatBox.innerHTML += `
+            <div class="flex items-start gap-2 text-rose-400">
+              <div class="p-2 bg-rose-950/60 border border-rose-500/30 rounded-xl text-xs">
+                Simulation error: ${json.error?.message || 'Server error'}
+              </div>
+            </div>
+          `;
+        }
+      } catch (err) {
+        const typingEl = document.getElementById(typingId);
+        if (typingEl) typingEl.remove();
+        chatBox.innerHTML += `
+          <div class="p-2 bg-rose-950/60 border border-rose-500/30 rounded-xl text-xs text-rose-300">
+            Network error: ${err.message}
+          </div>
+        `;
+      } finally {
+        if (sendBtn) sendBtn.disabled = false;
+        chatBox.scrollTop = chatBox.scrollHeight;
+      }
+    }
+
+    // Deploy Instructions to Live Bots
+    async function deployInstructionsLive() {
+      const deployBtn = document.getElementById('btn-deploy-instructions');
+      const compiledPrompt = document.getElementById('builder-compiled-preview').value;
+      const agentName = document.getElementById('builder-agent-name').value.trim() || 'AI Customer Specialist';
+
+      if (!compiledPrompt || compiledPrompt.length < 10) {
+        alert('Please complete the instruction fields before deploying.');
+        return;
+      }
+
+      const payload = {
+        agent_name: agentName,
+        builder_payload: {
+          agent_id: currentAgentStudioState.agent_id,
+          agent_name: agentName,
+          role_title: document.getElementById('builder-role-title').value.trim() || 'Customer Specialist',
+          tone_of_voice: document.getElementById('builder-tone').value,
+          language: document.getElementById('builder-language').value,
+          primary_mission: document.getElementById('builder-mission').value.trim() || 'Customer assistance',
+          business_rules: currentAgentStudioState.rules,
+          constraints_donts: currentAgentStudioState.constraints,
+          escalation_protocol: document.getElementById('builder-escalation').value.trim(),
+          greeting_message: document.getElementById('builder-greeting').value.trim()
+        },
+        compiled_prompt: compiledPrompt
+      };
+
+      deployBtn.disabled = true;
+      deployBtn.innerHTML = `<span class="animate-spin mr-1">🌀</span> Deploying...`;
+
+      try {
+        const res = await fetch('/api/v1/agents/instructions/deploy', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            ...(authToken ? { 'Authorization': `Bearer ${authToken}` } : {})
+          },
+          body: JSON.stringify(payload)
+        });
+
+        const json = await res.json();
+        if (json.success && json.data) {
+          const verNum = json.data.version_number;
+          const badgeText = document.getElementById('builder-badge-text');
+          if (badgeText) {
+            badgeText.textContent = `Live Bot: ${agentName} (v${verNum})`;
+          }
+          alert(`🚀 SUCCESS! Version v${verNum} successfully deployed to live bots!\n\nAll live WhatsApp, Messenger, and Instagram conversations will now strictly follow these instructions.`);
+        } else {
+          alert('Failed to deploy instructions: ' + (json.error?.message || json.detail || 'Server error'));
+        }
+      } catch (err) {
+        alert('Error deploying instructions: ' + err.message);
+      } finally {
+        deployBtn.disabled = false;
+        deployBtn.innerHTML = `<i data-lucide="send" class="w-4 h-4"></i> <span>🚀 Deploy to Live Bots</span>`;
+        if (window.lucide) lucide.createIcons();
+      }
+    }
+
+    // ==============================================================================
+    // KNOWLEDGE GAP DETECTION & RESOLUTION CONTROLLER
+    // ==============================================================================
+    let currentGapFilterStatus = 'all';
+    let currentGapFilterChannel = 'all';
+    let activeKnowledgeGaps = [];
+
+    async function loadKnowledgeGaps() {
+      if (!authToken) return;
+      try {
+        const url = `/api/v1/rag/gaps?status=${currentGapFilterStatus}&channel=${currentGapFilterChannel}`;
+        const res = await fetch(url, {
+          headers: { 'Authorization': `Bearer ${authToken}` }
+        });
+        const json = await res.json();
+        if (json.success && json.data) {
+          const data = json.data;
+          const statTotal = document.getElementById('statTotalGaps');
+          const statUnres = document.getElementById('statUnresolvedGaps');
+          const statRes = document.getElementById('statResolvedGaps');
+          const statRate = document.getElementById('statResolutionRate');
+
+          if (statTotal) statTotal.textContent = data.total_count || 0;
+          if (statUnres) statUnres.textContent = data.unresolved_count || 0;
+          if (statRes) statRes.textContent = data.resolved_count || 0;
+          if (statRate) statRate.textContent = `${data.resolution_rate || 0}%`;
+
+          activeKnowledgeGaps = data.items || [];
+          renderKnowledgeGapsList(activeKnowledgeGaps);
+        }
+      } catch (err) {
+        console.error("Failed to load knowledge gaps:", err);
+      }
+    }
+
+    function renderKnowledgeGapsList(gaps) {
+      const container = document.getElementById('knowledgeGapsContainer');
+      if (!container) return;
+
+      if (!gaps || gaps.length === 0) {
+        container.innerHTML = `
+          <div class="p-8 text-center bg-slate-950/60 border border-slate-800 rounded-xl space-y-2">
+            <i data-lucide="check-circle-2" class="w-8 h-8 text-emerald-400 mx-auto"></i>
+            <p class="text-xs font-semibold text-slate-300">No knowledge gaps detected for this filter!</p>
+            <p class="text-[11px] text-slate-500">All customer questions are covered by active RAG documents.</p>
+          </div>
+        `;
+        if (window.lucide) lucide.createIcons();
+        return;
+      }
+
+      container.innerHTML = gaps.map(gap => {
+        const isResolved = gap.status === 'resolved';
+        const isIgnored = gap.status === 'ignored';
+        
+        let statusBadge = `
+          <span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-500/10 text-amber-400 border border-amber-500/20">
+            Unresolved
+          </span>
+        `;
+        if (isResolved) {
+          statusBadge = `
+            <span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
+              Resolved in KB
+            </span>
+          `;
+        } else if (isIgnored) {
+          statusBadge = `
+            <span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-slate-800 text-slate-400">
+              Ignored
+            </span>
+          `;
+        }
+
+        const dateStr = new Date(gap.last_asked_at).toLocaleDateString([], { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' });
+        const freqBadge = gap.frequency_count > 1 
+          ? `<span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-rose-500/10 text-rose-400 border border-rose-500/20">Asked ${gap.frequency_count}x 🔥</span>`
+          : `<span class="px-2 py-0.5 rounded-full text-[10px] font-semibold bg-slate-800 text-slate-300">1x</span>`;
+
+        return `
+          <div class="p-3.5 rounded-xl bg-slate-950/80 border ${isResolved ? 'border-emerald-500/20' : 'border-slate-800 hover:border-amber-500/30'} space-y-2.5 transition">
+            <div class="flex items-start justify-between gap-3">
+              <div class="space-y-1 overflow-hidden">
+                <div class="flex flex-wrap items-center gap-2">
+                  <span class="px-2 py-0.5 rounded bg-slate-800 text-slate-300 font-mono text-[10px] uppercase font-bold">${gap.channel}</span>
+                  ${freqBadge}
+                  ${statusBadge}
+                  <span class="text-[10px] text-slate-500">Last: ${dateStr}</span>
+                </div>
+                <h4 class="text-xs font-bold text-white pt-0.5">${gap.question}</h4>
+              </div>
+              <div class="flex items-center gap-1.5 shrink-0">
+                ${!isResolved ? `
+                  <button onclick="openResolveGapModal('${gap.id}')" class="px-2.5 py-1.5 bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold text-[11px] rounded-lg transition flex items-center gap-1 shadow-sm shadow-emerald-500/20">
+                    <i data-lucide="plus-circle" class="w-3.5 h-3.5"></i>
+                    <span>+ Add to KB</span>
+                  </button>
+                  <button onclick="updateGapStatus('${gap.id}', 'ignored')" title="Ignore Question" class="p-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-400 hover:text-white transition">
+                    <i data-lucide="eye-off" class="w-3.5 h-3.5"></i>
+                  </button>
+                ` : `
+                  <span class="text-xs text-emerald-400 font-semibold flex items-center gap-1">
+                    <i data-lucide="check" class="w-3.5 h-3.5"></i> Active in RAG
+                  </span>
+                  <button onclick="updateGapStatus('${gap.id}', 'unresolved')" title="Reopen Gap" class="p-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-400 hover:text-white text-[10px] transition">
+                    Reopen
+                  </button>
+                `}
+                <button onclick="deleteKnowledgeGap('${gap.id}')" title="Delete" class="p-1.5 rounded-lg bg-slate-800 hover:bg-rose-950 hover:text-rose-400 text-slate-500 transition">
+                  <i data-lucide="trash-2" class="w-3.5 h-3.5"></i>
+                </button>
+              </div>
+            </div>
+
+            <!-- Answer / Suggested Answer Row -->
+            <div class="p-2.5 rounded-lg bg-slate-900 border border-slate-800/80 text-[11px] space-y-1">
+              <div class="flex items-center justify-between text-[10px] font-semibold text-slate-400">
+                <span class="flex items-center gap-1">
+                  <i data-lucide="sparkles" class="w-3 h-3 text-purple-400"></i>
+                  ${isResolved ? 'Indexed RAG Answer:' : 'Suggested Answer (AI):'}
+                </span>
+                ${!isResolved ? `
+                  <button onclick="generateGapDraft('${gap.id}')" class="text-purple-400 hover:text-purple-300 transition">
+                    ✨ Generate Draft with Gemini
+                  </button>
+                ` : ''}
+              </div>
+              <p class="text-slate-300" id="gapAnswer-${gap.id}">
+                ${gap.suggested_answer || '<span class="text-slate-500 italic">No answer drafted yet. Click "Generate Draft with Gemini" or "+ Add to KB" to write.</span>'}
+              </p>
+            </div>
+          </div>
+        `;
+      }).join('');
+
+      if (window.lucide) lucide.createIcons();
+    }
+
+    function filterKnowledgeGaps(status) {
+      currentGapFilterStatus = status;
+      document.querySelectorAll('.gap-filter-btn').forEach(btn => {
+        if (btn.getAttribute('data-status') === status) {
+          btn.className = 'gap-filter-btn px-2.5 py-1 rounded-lg bg-amber-500/20 text-amber-300 font-bold border border-amber-500/30';
+        } else {
+          btn.className = 'gap-filter-btn px-2.5 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 font-medium';
+        }
+      });
+      loadKnowledgeGaps();
+    }
+
+    function filterKnowledgeGapsChannel(channel) {
+      currentGapFilterChannel = channel;
+      loadKnowledgeGaps();
+    }
+
+    async function generateGapDraft(gapId) {
+      const answerEl = document.getElementById(`gapAnswer-${gapId}`);
+      if (answerEl) answerEl.innerHTML = `<span class="animate-pulse text-purple-400">✨ Gemini is generating draft answer...</span>`;
+
+      try {
+        const res = await fetch(`/api/v1/rag/gaps/${gapId}/suggest`, {
+          method: 'POST',
+          headers: { 'Authorization': `Bearer ${authToken}` }
+        });
+        const json = await res.json();
+        if (json.success && json.data) {
+          if (answerEl) answerEl.textContent = json.data.suggested_answer;
+          const item = activeKnowledgeGaps.find(g => g.id === gapId);
+          if (item) item.suggested_answer = json.data.suggested_answer;
+        } else {
+          alert("Failed to draft answer: " + (json.error?.message || "Server error"));
+          loadKnowledgeGaps();
+        }
+      } catch (err) {
+        alert("Error drafting answer: " + err.message);
+        loadKnowledgeGaps();
+      }
+    }
+
+    function openResolveGapModal(gapId) {
+      const gap = activeKnowledgeGaps.find(g => g.id === gapId);
+      if (!gap) return;
+
+      document.getElementById('resolveGapId').value = gap.id;
+      document.getElementById('resolveGapQuestionText').textContent = gap.question;
+      document.getElementById('resolveGapTitleInput').value = `FAQ: ${gap.question.slice(0, 60)}`;
+      document.getElementById('resolveGapAnswerInput').value = gap.suggested_answer || '';
+
+      const modal = document.getElementById('modalResolveGap');
+      if (modal) modal.classList.remove('hidden');
+
+      if (!gap.suggested_answer) {
+        triggerRegenerateDraftInModal();
+      }
+    }
+
+    function closeResolveGapModal() {
+      const modal = document.getElementById('modalResolveGap');
+      if (modal) modal.classList.add('hidden');
+    }
+
+    async function triggerRegenerateDraftInModal() {
+      const gapId = document.getElementById('resolveGapId').value;
+      const answerInput = document.getElementById('resolveGapAnswerInput');
+      const btn = document.getElementById('btnModalRedraft');
+
+      if (!gapId) return;
+      if (btn) btn.innerHTML = `<span>🌀 Drafting...</span>`;
+
+      try {
+        const res = await fetch(`/api/v1/rag/gaps/${gapId}/suggest`, {
+          method: 'POST',
+          headers: { 'Authorization': `Bearer ${authToken}` }
+        });
+        const json = await res.json();
+        if (json.success && json.data) {
+          answerInput.value = json.data.suggested_answer;
+        }
+      } catch (e) {
+        console.error(e);
+      } finally {
+        if (btn) btn.innerHTML = `<i data-lucide="sparkles" class="w-3 h-3"></i> AI Re-Draft`;
+        if (window.lucide) lucide.createIcons();
+      }
+    }
+
+    async function submitResolveGap() {
+      const gapId = document.getElementById('resolveGapId').value;
+      const docTitle = document.getElementById('resolveGapTitleInput').value.trim();
+      const answerText = document.getElementById('resolveGapAnswerInput').value.trim();
+      const btn = document.getElementById('btnConfirmResolveGap');
+
+      if (!answerText || answerText.length < 5) {
+        alert("Please enter a valid answer (minimum 5 characters).");
+        return;
+      }
+
+      btn.disabled = true;
+      btn.innerHTML = `<span class="animate-spin mr-1">🌀</span> Indexing in pgvector...`;
+
+      try {
+        const res = await fetch(`/api/v1/rag/gaps/${gapId}/resolve`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${authToken}`
+          },
+          body: JSON.stringify({
+            answer_text: answerText,
+            doc_title: docTitle || null
+          })
+        });
+
+        const json = await res.json();
+        if (json.success) {
+          closeResolveGapModal();
+          alert("🎉 Success! This answer has been converted into a Document and indexed in pgvector.\n\nAll live WhatsApp, Messenger, and Instagram bots will now accurately answer this question!");
+          await loadKnowledgeBaseData();
+        } else {
+          alert("Failed to resolve: " + (json.error?.message || json.detail || "Server error"));
+        }
+      } catch (err) {
+        alert("Error resolving gap: " + err.message);
+      } finally {
+        btn.disabled = false;
+        btn.innerHTML = `<i data-lucide="check-circle" class="w-3.5 h-3.5"></i> <span>Index in pgvector & Resolve</span>`;
+        if (window.lucide) lucide.createIcons();
+      }
+    }
+
+    async function updateGapStatus(gapId, newStatus) {
+      try {
+        const res = await fetch(`/api/v1/rag/gaps/${gapId}/status`, {
+          method: 'PATCH',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${authToken}`
+          },
+          body: JSON.stringify({ status: newStatus })
+        });
+        const json = await res.json();
+        if (json.success) {
+          loadKnowledgeGaps();
+        } else {
+          alert("Failed to update status: " + (json.error?.message || "Server error"));
+        }
+      } catch (err) {
+        alert("Error: " + err.message);
+      }
+    }
+
+    async function deleteKnowledgeGap(gapId) {
+      if (!confirm("Are you sure you want to remove this knowledge gap record?")) return;
+      try {
+        const res = await fetch(`/api/v1/rag/gaps/${gapId}`, {
+          method: 'DELETE',
+          headers: { 'Authorization': `Bearer ${authToken}` }
+        });
+        const json = await res.json();
+        if (json.success) {
+          loadKnowledgeGaps();
+        } else {
+          alert("Failed to delete: " + (json.error?.message || "Server error"));
+        }
+      } catch (err) {
+        alert("Error: " + err.message);
+      }
+    }
+
+    async function scanInboxGaps() {
+      const btn = document.getElementById('btnScanGaps');
+      if (btn) {
+        btn.disabled = true;
+        btn.innerHTML = `<span class="animate-spin mr-1">🌀</span> Scanning Inbox...`;
+      }
+      try {
+        const res = await fetch('/api/v1/rag/gaps/scan', {
+          method: 'POST',
+          headers: { 'Authorization': `Bearer ${authToken}` }
+        });
+        const json = await res.json();
+        if (json.success) {
+          alert(`✅ ${json.data.message || 'Inbox scan complete!'}`);
+          loadKnowledgeGaps();
+        } else {
+          alert("Scan failed: " + (json.error?.message || "Server error"));
+        }
+      } catch (err) {
+        alert("Error scanning inbox: " + err.message);
+      } finally {
+        if (btn) {
+          btn.disabled = false;
+          btn.innerHTML = `<i data-lucide="scan" class="w-3.5 h-3.5 text-amber-400"></i> <span>Scan Inbox</span>`;
+          if (window.lucide) lucide.createIcons();
+        }
+      }
+    }
+
+    function openLogGapModal() {
+      const modal = document.getElementById('modalLogGap');
+      if (modal) modal.classList.remove('hidden');
+    }
+
+    function closeLogGapModal() {
+      const modal = document.getElementById('modalLogGap');
+      if (modal) modal.classList.add('hidden');
+    }
+
+    async function submitLogGap() {
+      const qInput = document.getElementById('logGapQuestionInput');
+      const chSelect = document.getElementById('logGapChannelInput');
+      if (!qInput || !qInput.value.trim()) {
+        alert("Please enter a customer question.");
+        return;
+      }
+
+      try {
+        const res = await fetch('/api/v1/rag/gaps/record', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${authToken}`
+          },
+          body: JSON.stringify({
+            question: qInput.value.trim(),
+            channel: chSelect.value
+          })
+        });
+        const json = await res.json();
+        if (json.success) {
+          closeLogGapModal();
+          qInput.value = '';
+          loadKnowledgeGaps();
+        } else {
+          alert("Failed to log question: " + (json.error?.message || "Server error"));
+        }
+      } catch (err) {
+        alert("Error: " + err.message);
       }
     }
 

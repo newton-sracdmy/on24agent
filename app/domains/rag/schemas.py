@@ -59,3 +59,48 @@ class SemanticSearchRequest(BaseSchema):
     query: str = Field(..., min_length=1)
     top_k: int = Field(5, ge=1, le=50)
     score_threshold: Optional[float] = Field(0.7, ge=0.0, le=1.0)
+
+
+# ==============================================================================
+# Knowledge Gap Schemas
+# ==============================================================================
+
+class KnowledgeGapResponse(BaseSchema):
+    id: UUID
+    organization_id: UUID
+    knowledge_base_id: Optional[UUID] = None
+    question: str
+    normalized_query: str
+    channel: str
+    frequency_count: int
+    status: str
+    suggested_answer: Optional[str] = None
+    resolved_document_id: Optional[UUID] = None
+    last_asked_at: datetime
+    created_at: datetime
+
+
+class KnowledgeGapCreate(BaseSchema):
+    question: str = Field(..., min_length=2)
+    channel: Optional[str] = "whatsapp"
+    knowledge_base_id: Optional[UUID] = None
+
+
+class KnowledgeGapResolveRequest(BaseSchema):
+    answer_text: str = Field(..., min_length=5)
+    doc_title: Optional[str] = None
+    knowledge_base_id: Optional[UUID] = None
+
+
+class KnowledgeGapStatusUpdate(BaseSchema):
+    status: str = Field(..., pattern="^(unresolved|resolved|ignored)$")
+
+
+class KnowledgeGapListResponse(BaseSchema):
+    items: List[KnowledgeGapResponse]
+    total_count: int
+    unresolved_count: int
+    resolved_count: int
+    ignored_count: int
+    resolution_rate: float
+
