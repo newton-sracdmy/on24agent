@@ -167,13 +167,12 @@ async def _process_whatsapp_message(
         if creds_json:
             try:
                 creds_dict = json.loads(creds_json)
-                access_token = creds_dict.get("access_token", "")
+                access_token = creds_dict.get("access_token") or creds_dict.get("api_key_or_token") or ""
             except Exception:
                 pass
 
         if not access_token:
-            from app.config import settings
-            access_token = settings.META_WHATSAPP_API_TOKEN or ""
+            logger.error(f"No access_token stored for WhatsApp channel account {ch_row['id']}")
 
         # Set RLS Context
         await session.execute(text(f"SELECT set_config('app.current_org_id', '{org_id}', true);"))

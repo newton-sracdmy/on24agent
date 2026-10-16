@@ -28,12 +28,10 @@ async def send_instagram_message(
     sender_account_id: Optional[str] = None,
 ) -> bool:
     """Send an outbound text message to an Instagram user via Meta Graph API."""
-    from app.config import settings
-
     if access_token.startswith("IGAA") or access_token.startswith("IGQ"):
         url = f"https://graph.instagram.com/{META_GRAPH_API_VERSION}/me/messages"
     else:
-        target_id = sender_account_id or settings.FB_PAGE_ID or "me"
+        target_id = sender_account_id or "me"
         url = f"https://graph.facebook.com/{META_GRAPH_API_VERSION}/{target_id}/messages"
     params = {"access_token": access_token}
     payload = {
@@ -120,13 +118,14 @@ async def _process_instagram_message(account_id: str, sender_igsid: str, user_te
         if creds_json:
             try:
                 creds_dict = json.loads(creds_json)
-                access_token = creds_dict.get("access_token") or creds_dict.get("page_access_token") or ""
+                access_token = (
+                    creds_dict.get("access_token") or creds_dict.get("page_access_token") or creds_dict.get("api_key_or_token") or ""
+                )
             except Exception:
                 pass
 
         if not access_token:
-            from app.config import settings
-            access_token = settings.INSTAGRAM_ACCESS_TOKEN or settings.META_WHATSAPP_API_TOKEN or settings.FB_PAGE_ACCESS_TOKEN or ""
+            logger.error(f"No access_token stored for Instagram channel account {ch_row['id']}")
 
         # Set RLS Context
         await session.execute(text(f"SELECT set_config('app.current_org_id', '{org_id}', true);"))

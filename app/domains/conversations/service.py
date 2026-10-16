@@ -93,7 +93,6 @@ class ConversationService:
                 import logging
                 from sqlalchemy import text
                 from app.security import decrypt_secret
-                from app.config import settings
                 from app.domains.channels.facebook_service import send_facebook_message
                 from app.domains.channels.whatsapp_service import send_whatsapp_message
 
@@ -137,7 +136,7 @@ class ConversationService:
 
                     # 1. Facebook Messenger Dispatch
                     if channel_type == "messenger" or "psid" in custom_attrs:
-                        page_token = creds.get("page_access_token") or getattr(settings, "FB_PAGE_ACCESS_TOKEN", None)
+                        page_token = creds.get("page_access_token") or creds.get("api_key_or_token")
                         recipient_psid = custom_attrs.get("psid")
                         if page_token and recipient_psid:
                             logger.info(f"Dispatching outbound Messenger message to PSID {recipient_psid}")
@@ -147,8 +146,8 @@ class ConversationService:
 
                     # 2. WhatsApp Cloud API Dispatch
                     elif channel_type == "whatsapp" or "wa_id" in custom_attrs or (c_data and c_data["phone_number"]):
-                        wa_token = creds.get("access_token") or settings.META_WHATSAPP_API_TOKEN
-                        phone_number_id = creds.get("phone_number_id") or ch_data["account_identifier"] or settings.META_WHATSAPP_PHONE_NUMBER_ID
+                        wa_token = creds.get("access_token") or creds.get("api_key_or_token")
+                        phone_number_id = creds.get("phone_number_id") or ch_data["account_identifier"]
                         recipient_wa = custom_attrs.get("wa_id")
                         if not recipient_wa and c_data and c_data["phone_number"]:
                             recipient_wa = c_data["phone_number"].replace("+", "").replace(" ", "").replace("-", "").strip()
@@ -162,11 +161,13 @@ class ConversationService:
                     # 3. Instagram Direct Message Dispatch
                     elif channel_type == "instagram" or "igsid" in custom_attrs:
                         from app.domains.channels.instagram_service import send_instagram_message
-                        ig_token = creds.get("access_token") or getattr(settings, "INSTAGRAM_ACCESS_TOKEN", None) or getattr(settings, "META_WHATSAPP_API_TOKEN", None) or getattr(settings, "FB_PAGE_ACCESS_TOKEN", None)
+                        ig_token = creds.get("access_token") or creds.get("page_access_token") or creds.get("api_key_or_token")
                         recipient_igsid = custom_attrs.get("igsid")
                         if ig_token and recipient_igsid:
                             logger.info(f"Dispatching outbound Instagram DM to IGSID {recipient_igsid}")
-                            sent = await send_instagram_message(ig_token, recipient_igsid, data.text_content)
+                            sent = await send_instagram_message(
+                                ig_token, recipient_igsid, data.text_content, sender_account_id=ch_data["account_identifier"]
+                            )
                             if sent:
                                 msg.delivery_status = MessageDeliveryStatus.DELIVERED.value
             except Exception as e:

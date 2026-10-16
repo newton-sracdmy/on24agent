@@ -92,10 +92,10 @@ async def _process_facebook_message(page_id: str, sender_psid: str, user_text: s
 
         # Decrypt Page Access Token
         creds_json = decrypt_secret(ch_row["encrypted_credentials"])
-        page_access_token = json.loads(creds_json).get("page_access_token", "") if creds_json else ""
+        creds = json.loads(creds_json) if creds_json else {}
+        page_access_token = creds.get("page_access_token") or creds.get("api_key_or_token") or ""
         if not page_access_token:
-            from app.config import settings
-            page_access_token = settings.FB_PAGE_ACCESS_TOKEN or ""
+            logger.error(f"No page_access_token stored for Facebook channel account {ch_row['id']}")
 
         # Set RLS Context
         await session.execute(text(f"SELECT set_config('app.current_org_id', '{org_id}', true);"))

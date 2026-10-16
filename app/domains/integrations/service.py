@@ -332,6 +332,13 @@ class IntegrationsService:
             "connected_at": now.isoformat(),
             **data.additional_config,
         }
+        # Channel services read these canonical keys, not the generic form fields
+        if slug == "whatsapp":
+            creds_payload.update(access_token=data.api_key_or_token, phone_number_id=data.endpoint_or_secret)
+        elif slug == "messenger":
+            creds_payload.update(page_access_token=data.api_key_or_token, page_id=data.endpoint_or_secret)
+        elif slug == "instagram":
+            creds_payload.update(access_token=data.api_key_or_token, instagram_account_id=data.endpoint_or_secret)
         encrypted_blob = encrypt_secret(json.dumps(creds_payload))
 
         if catalog_entry["is_channel"]:

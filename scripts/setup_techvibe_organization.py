@@ -2,9 +2,10 @@
 
 import asyncio
 import json
+import os
 from uuid import UUID
 from sqlalchemy import text
-from app.config import settings
+from dotenv import dotenv_values
 from app.database import admin_engine
 from app.security import encrypt_secret
 
@@ -17,8 +18,10 @@ TECHVIBE_KB_ID = "00000000-0000-0000-0000-000000000230"
 TECHVIBE_DOC_ID = "00000000-0000-0000-0000-000000000231"
 TECHVIBE_DOC_VER_ID = "00000000-0000-0000-0000-000000000232"
 
-PAGE_ID = settings.FB_PAGE_ID or "1463059650215713"
-PAGE_ACCESS_TOKEN = settings.FB_PAGE_ACCESS_TOKEN or ""
+# Seed-only values; the app itself reads page tokens from channel_accounts, not settings.
+_env = {**dotenv_values(".env"), **os.environ}
+PAGE_ID = _env.get("FB_PAGE_ID")
+PAGE_ACCESS_TOKEN = _env.get("FB_PAGE_ACCESS_TOKEN") or ""
 
 
 async def setup_techvibe():
