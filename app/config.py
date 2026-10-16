@@ -156,6 +156,25 @@ class Settings(BaseSettings):
     LOGIN_LOCKOUT_WINDOW_SECONDS: int = 900
     REGISTER_MAX_PER_IP_PER_HOUR: int = 10
 
+    # Password Reset
+    PASSWORD_RESET_TOKEN_EXPIRE_MINUTES: int = 30
+    PASSWORD_RESET_MAX_PER_EMAIL_PER_HOUR: int = 3
+    PASSWORD_RESET_MAX_PER_IP_PER_HOUR: int = 20
+
+    # Public URL of the web app, used to build links in emails (no trailing slash)
+    APP_BASE_URL: str = "http://localhost:8000"
+
+    # Outbound Email (SMTP). In development/test an unset SMTP_HOST logs emails instead of
+    # sending them; in staging/production it makes every send fail loudly.
+    SMTP_HOST: Optional[str] = None
+    SMTP_PORT: int = 587
+    SMTP_USERNAME: Optional[str] = None
+    SMTP_PASSWORD: Optional[str] = None
+    SMTP_SECURITY: Literal["starttls", "ssl", "none"] = "starttls"
+    SMTP_TIMEOUT_SECONDS: int = 15
+    EMAIL_FROM_ADDRESS: str = "no-reply@localhost"
+    EMAIL_FROM_NAME: str = "On24agent"
+
     # Media & File Storage
     STORAGE_BACKEND: Literal["local", "s3"] = "local"
     STORAGE_LOCAL_ROOT: str = "./storage_uploads"

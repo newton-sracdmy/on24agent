@@ -14,20 +14,21 @@ from app.constants import AgentOnlineStatus, MembershipRole, OrganizationStatus,
 # Authentication Schemas
 # ==============================================================================
 
+def check_password_strength(v: str) -> str:
+    if not any(c.isalpha() for c in v) or not any(c.isdigit() for c in v):
+        raise ValueError("Password must contain both letters and digits")
+    if len(set(v)) < 5:
+        raise ValueError("Password is too repetitive")
+    return v
+
+
 class UserRegister(BaseSchema):
     email: EmailStr = Field(..., description="Corporate email address")
     password: str = Field(..., min_length=10, max_length=128, description="10-128 chars with letters and digits")
     full_name: str = Field(..., min_length=2, max_length=255, description="Full legal name")
     organization_name: str = Field(..., min_length=2, max_length=255, description="Initial workspace name")
 
-    @field_validator("password")
-    @classmethod
-    def _password_strength(cls, v: str) -> str:
-        if not any(c.isalpha() for c in v) or not any(c.isdigit() for c in v):
-            raise ValueError("Password must contain both letters and digits")
-        if len(set(v)) < 5:
-            raise ValueError("Password is too repetitive")
-        return v
+    validate_password_strength = field_validator("password")(check_password_strength)
 
 
 class UserLogin(BaseSchema):
@@ -48,6 +49,17 @@ class TokenResponse(BaseSchema):
 
 class RefreshTokenRequest(BaseSchema):
     refresh_token: str
+
+
+class ForgotPasswordRequest(BaseSchema):
+    email: EmailStr
+
+
+class ResetPasswordRequest(BaseSchema):
+    token: str = Field(..., min_length=20, max_length=256, description="Token from the password reset email")
+    new_password: str = Field(..., min_length=10, max_length=128, description="10-128 chars with letters and digits")
+
+    validate_password_strength = field_validator("new_password")(check_password_strength)
 
 
 # ==============================================================================

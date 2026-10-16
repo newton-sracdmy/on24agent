@@ -1,8 +1,8 @@
-"""Brute-force protection for login and registration.
+"""Brute-force protection for login, registration and password reset.
 
 Fixed-window counters in Redis: failed logins are counted per email and per client IP,
-and registrations per client IP. Once a counter reaches its limit, further attempts are
-rejected with 429 until the window expires.
+registrations per client IP, and password reset requests per email and per client IP. Once a
+counter reaches its limit, further attempts are rejected with 429 until the window expires.
 """
 
 import hashlib
@@ -91,4 +91,34 @@ async def ensure_registration_allowed(ip: Optional[str]) -> None:
         logger.warning(f"Registration rate limit check unavailable: {e}")
         return
     if count > settings.REGISTER_MAX_PER_IP_PER_HOUR:
+        raise RateLimitExceededError(retry_after_seconds=3600)
+
+
+async def ensure_password_reset_request_allowed(email: str, ip: Optional[str]) -> bool:
+    """Count a reset request; False once this email or IP is over its hourly limit.
+
+    Over-limit requests are dropped silently rather than rejected, so the response never
+    differs between registered and unregistered emails. The IP limit still raises 429, since
+    it says nothing about any particular account.
+    """
+    digest = hashlib.sha256(email.strip().lower().encode("utf-8")).hexdigest()
+    try:
+        ip_count = await _increment(f"auth:pw_reset:ip:{ip or 'unknown'}", 3600)
+        email_count = await _increment(f"auth:pw_reset:email:{digest}", 3600)
+    except Exception as e:
+        logger.warning(f"Password reset rate limit check unavailable: {e}")
+        return True
+    if ip_count > settings.PASSWORD_RESET_MAX_PER_IP_PER_HOUR:
+        raise RateLimitExceededError(retry_after_seconds=3600)
+    return email_count <= settings.PASSWORD_RESET_MAX_PER_EMAIL_PER_HOUR
+
+
+async def ensure_password_reset_attempt_allowed(ip: Optional[str]) -> None:
+    """Raise 429 if this IP has submitted too many reset tokens in the last hour."""
+    try:
+        count = await _increment(f"auth:pw_reset_submit:ip:{ip or 'unknown'}", 3600)
+    except Exception as e:
+        logger.warning(f"Password reset attempt rate limit check unavailable: {e}")
+        return
+    if count > settings.PASSWORD_RESET_MAX_PER_IP_PER_HOUR:
         raise RateLimitExceededError(retry_after_seconds=3600)

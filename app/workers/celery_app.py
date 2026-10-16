@@ -11,6 +11,7 @@ celery_app = Celery(
         "app.workers.tasks.ai_tasks",
         "app.workers.tasks.ingestion_tasks",
         "app.workers.tasks.campaign_tasks",
+        "app.workers.tasks.email_tasks",
     ],
 )
 
@@ -28,5 +29,6 @@ celery_app.conf.update(
         "app.workers.tasks.ai_tasks.*": {"queue": "ai"},
         "app.workers.tasks.ingestion_tasks.*": {"queue": "ingestion"},
         "app.workers.tasks.campaign_tasks.*": {"queue": "campaigns"},
+        "app.workers.tasks.email_tasks.*": {"queue": "default"},
     },
 )

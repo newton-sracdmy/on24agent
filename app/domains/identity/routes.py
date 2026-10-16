@@ -15,8 +15,10 @@ from app.dependencies import (
     require_tenant,
 )
 from app.domains.identity.schemas import (
+    ForgotPasswordRequest,
     MembershipResponse,
     RefreshTokenRequest,
+    ResetPasswordRequest,
     TokenResponse,
     UserLogin,
     UserRegister,
@@ -68,6 +70,38 @@ async def refresh(
     service = IdentityService(db)
     token_response = await service.refresh_tokens(payload.refresh_token)
     return APIResponse.ok(data=token_response)
+
+
+@router.post("/forgot-password", response_model=APIResponse[dict])
+async def forgot_password(
+    payload: ForgotPasswordRequest,
+    request: Request,
+    db: AsyncSession = Depends(get_db, scope="function"),
+) -> APIResponse[dict]:
+    """Email a password reset link. Responds identically whether or not the email is registered."""
+    ip = request.client.host if request.client else None
+    service = IdentityService(db)
+    await service.request_password_reset(payload.email, ip_address=ip)
+    return APIResponse.ok(data={
+        "success": True,
+        "message": "If an account exists for this email, a password reset link has been sent.",
+    })
+
+
+@router.post("/reset-password", response_model=APIResponse[dict])
+async def reset_password(
+    payload: ResetPasswordRequest,
+    request: Request,
+    db: AsyncSession = Depends(get_db, scope="function"),
+) -> APIResponse[dict]:
+    """Set a new password using the emailed token. Signs the account out on every device."""
+    ip = request.client.host if request.client else None
+    service = IdentityService(db)
+    await service.reset_password(payload.token, payload.new_password, ip_address=ip)
+    return APIResponse.ok(data={
+        "success": True,
+        "message": "Your password has been reset. Please sign in with your new password.",
+    })
 
 
 @router.post("/logout", response_model=APIResponse[dict])

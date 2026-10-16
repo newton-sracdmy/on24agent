@@ -10,6 +10,7 @@ from app.domains.identity.models import (
     Membership,
     Organization,
     Permission,
+    PasswordResetToken,
     RefreshToken,
     Role,
     RolePermission,
