@@ -2,11 +2,12 @@
 
 import json
 import logging
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Any, Dict, List, Optional
 from uuid import UUID
 
 from sqlalchemy import text
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.domains.integrations.schemas import (
@@ -322,16 +323,17 @@ class IntegrationsService:
         if not catalog_entry:
             raise ValueError(f"Unknown integration app: '{data.app_slug}'")
 
-        now = datetime.utcnow()
+        now = datetime.now(timezone.utc)
         display_name = data.account_name or catalog_entry["name"]
         identifier = data.endpoint_or_secret or f"{slug}_default"
+        additional_config = data.additional_config or {}
 
-        # Encrypt the credentials payload securely
+        # Encrypt the credentials payload securely; extra config never overrides the submitted credentials
         creds_payload = {
+            **additional_config,
             "api_key_or_token": data.api_key_or_token,
             "endpoint_or_secret": data.endpoint_or_secret,
             "connected_at": now.isoformat(),
-            **data.additional_config,
         }
         # Channel services read these canonical keys, not the generic form fields
         if slug == "whatsapp":
@@ -385,97 +387,26 @@ class IntegrationsService:
                         "Disconnect it there first."
                     )
 
-            # Upsert into channel_accounts for this organization
-            # 1. First check if an account with the exact same identifier already exists (regardless of is_deleted)
-            q_existing = await session.execute(
-                text(
-                    """
-                    SELECT id FROM channel_accounts
-                    WHERE organization_id = :org_id AND channel_id = :channel_id AND account_identifier = :identifier
-                    LIMIT 1;
-                    """
-                ),
-                {"org_id": org_id, "channel_id": channel_id, "identifier": identifier},
-            )
-            existing_ca = q_existing.mappings().first()
-
-            if not existing_ca:
-                # 2. Check if any account exists for this channel in this org
-                q_existing_ch = await session.execute(
-                    text(
-                        """
-                        SELECT id FROM channel_accounts
-                        WHERE organization_id = :org_id AND channel_id = :channel_id
-                        ORDER BY is_deleted ASC, created_at DESC
-                        LIMIT 1;
-                        """
-                    ),
-                    {"org_id": org_id, "channel_id": channel_id},
+            try:
+                await IntegrationsService._upsert_channel_account(
+                    session, org_id, channel_id, display_name, identifier, encrypted_blob, slug
                 )
-                existing_ca = q_existing_ch.mappings().first()
-
-            if existing_ca:
-                await session.execute(
-                    text(
-                        """
-                        UPDATE channel_accounts
-                        SET name = :name,
-                            account_identifier = :identifier,
-                            encrypted_credentials = :enc,
-                            settings = CAST(:settings AS jsonb),
-                            status = 'connected',
-                            is_deleted = false,
-                            deleted_at = NULL,
-                            updated_at = CURRENT_TIMESTAMP
-                        WHERE id = :id;
-                        """
-                    ),
-                    {
-                        "id": existing_ca["id"],
-                        "name": display_name,
-                        "identifier": identifier,
-                        "enc": encrypted_blob,
-                        "settings": json.dumps({"app_slug": slug}),
-                    },
-                )
-            else:
-                await session.execute(
-                    text(
-                        """
-                        INSERT INTO channel_accounts (
-                            id, organization_id, channel_id, name, account_identifier,
-                            status, encrypted_credentials, settings, is_deleted, created_at, updated_at
-                        )
-                        VALUES (
-                            gen_random_uuid(), :org_id, :channel_id, :name, :identifier,
-                            'connected', :enc, CAST(:settings AS jsonb), false, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP
-                        )
-                        ON CONFLICT (organization_id, channel_id, account_identifier)
-                        DO UPDATE SET
-                            name = EXCLUDED.name,
-                            status = 'connected',
-                            encrypted_credentials = EXCLUDED.encrypted_credentials,
-                            settings = EXCLUDED.settings,
-                            is_deleted = false,
-                            deleted_at = NULL,
-                            updated_at = CURRENT_TIMESTAMP;
-                        """
-                    ),
-                    {
-                        "org_id": org_id,
-                        "channel_id": channel_id,
-                        "name": display_name,
-                        "identifier": identifier,
-                        "enc": encrypted_blob,
-                        "settings": json.dumps({"app_slug": slug}),
-                    },
+            except IntegrityError as e:
+                # The check above cannot see other tenants under RLS and races concurrent requests;
+                # uq_active_channel_identifier is the real guarantee
+                if "uq_active_channel_identifier" not in str(e.orig):
+                    raise
+                await session.rollback()
+                raise ResourceConflictError(
+                    f"This {catalog_entry['name']} account is already connected to another workspace. "
+                    "Disconnect it there first."
                 )
         else:
             # Upsert into integrations table for SaaS tools
             config_json = {
+                **additional_config,
                 "identifier": identifier,
                 "display_name": display_name,
-                **data.additional_config,
             }
             await session.execute(
                 text(
@@ -512,9 +443,105 @@ class IntegrationsService:
             app_slug=slug,
             name=catalog_entry["name"],
             status="connected",
-            message=f"{catalog_entry['name']} was successfully connected and verified.",
+            message=f"{catalog_entry['name']} was successfully connected.",
             connected_at=now,
         )
+
+    @staticmethod
+    async def _upsert_channel_account(
+        session: AsyncSession,
+        org_id: UUID,
+        channel_id: UUID,
+        display_name: str,
+        identifier: str,
+        encrypted_blob: str,
+        slug: str,
+    ) -> None:
+        """Create or update this organization's account on the channel."""
+        # 1. First check if an account with the exact same identifier already exists (regardless of is_deleted)
+        q_existing = await session.execute(
+            text(
+                """
+                SELECT id FROM channel_accounts
+                WHERE organization_id = :org_id AND channel_id = :channel_id AND account_identifier = :identifier
+                LIMIT 1;
+                """
+            ),
+            {"org_id": org_id, "channel_id": channel_id, "identifier": identifier},
+        )
+        existing_ca = q_existing.mappings().first()
+
+        if not existing_ca:
+            # 2. Check if any account exists for this channel in this org
+            q_existing_ch = await session.execute(
+                text(
+                    """
+                    SELECT id FROM channel_accounts
+                    WHERE organization_id = :org_id AND channel_id = :channel_id
+                    ORDER BY is_deleted ASC, created_at DESC
+                    LIMIT 1;
+                    """
+                ),
+                {"org_id": org_id, "channel_id": channel_id},
+            )
+            existing_ca = q_existing_ch.mappings().first()
+
+        if existing_ca:
+            await session.execute(
+                text(
+                    """
+                    UPDATE channel_accounts
+                    SET name = :name,
+                        account_identifier = :identifier,
+                        encrypted_credentials = :enc,
+                        settings = CAST(:settings AS jsonb),
+                        status = 'connected',
+                        is_deleted = false,
+                        deleted_at = NULL,
+                        updated_at = CURRENT_TIMESTAMP
+                    WHERE id = :id;
+                    """
+                ),
+                {
+                    "id": existing_ca["id"],
+                    "name": display_name,
+                    "identifier": identifier,
+                    "enc": encrypted_blob,
+                    "settings": json.dumps({"app_slug": slug}),
+                },
+            )
+        else:
+            await session.execute(
+                text(
+                    """
+                    INSERT INTO channel_accounts (
+                        id, organization_id, channel_id, name, account_identifier,
+                        status, encrypted_credentials, settings, is_deleted, created_at, updated_at
+                    )
+                    VALUES (
+                        gen_random_uuid(), :org_id, :channel_id, :name, :identifier,
+                        'connected', :enc, CAST(:settings AS jsonb), false, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP
+                    )
+                    ON CONFLICT (organization_id, channel_id, account_identifier)
+                    DO UPDATE SET
+                        name = EXCLUDED.name,
+                        status = 'connected',
+                        encrypted_credentials = EXCLUDED.encrypted_credentials,
+                        settings = EXCLUDED.settings,
+                        is_deleted = false,
+                        deleted_at = NULL,
+                        updated_at = CURRENT_TIMESTAMP;
+                    """
+                ),
+                {
+                    "org_id": org_id,
+                    "channel_id": channel_id,
+                    "name": display_name,
+                    "identifier": identifier,
+                    "enc": encrypted_blob,
+                    "settings": json.dumps({"app_slug": slug}),
+                },
+            )
 
     @staticmethod
     async def disconnect_integration(session: AsyncSession, org_id: UUID, app_slug: str) -> bool:
@@ -530,11 +557,13 @@ class IntegrationsService:
                 text(
                     """
                     UPDATE channel_accounts ca
-                    SET is_deleted = true, status = 'disconnected', updated_at = CURRENT_TIMESTAMP
+                    SET is_deleted = true, status = 'disconnected', deleted_at = CURRENT_TIMESTAMP,
+                        updated_at = CURRENT_TIMESTAMP
                     FROM channels ch
                     WHERE ch.id = ca.channel_id
                       AND ch.type = :type
-                      AND ca.organization_id = :org_id;
+                      AND ca.organization_id = :org_id
+                      AND ca.is_deleted = false;
                     """
                 ),
                 {"type": channel_type, "org_id": org_id},

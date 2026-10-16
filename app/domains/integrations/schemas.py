@@ -3,7 +3,7 @@
 from datetime import datetime
 from typing import Any, Dict, List, Optional
 from uuid import UUID
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field
 
 
 class IntegrationItem(BaseModel):
@@ -31,10 +31,15 @@ class IntegrationListResponse(BaseModel):
 
 class ConnectIntegrationRequest(BaseModel):
     """Payload to connect or update an integration."""
-    app_slug: str = Field(..., description="App slug to connect (e.g. messenger, whatsapp, shopify)")
-    api_key_or_token: str = Field(..., min_length=1, description="Primary API key, access token, or bot token")
-    endpoint_or_secret: Optional[str] = Field(None, description="Webhook secret, Page ID, Store domain, or Phone Number ID")
-    account_name: Optional[str] = Field(None, description="Optional custom label for the connected account")
+    model_config = ConfigDict(str_strip_whitespace=True)
+
+    app_slug: str = Field(..., max_length=50, description="App slug to connect (e.g. messenger, whatsapp, shopify)")
+    # Large enough for a Google service-account JSON key
+    api_key_or_token: str = Field(..., min_length=1, max_length=10000, description="Primary API key, access token, or bot token")
+    # Stored as channel_accounts.account_identifier (VARCHAR 255)
+    endpoint_or_secret: Optional[str] = Field(None, max_length=255, description="Webhook secret, Page ID, Store domain, or Phone Number ID")
+    # Stored as integrations.name (VARCHAR 100)
+    account_name: Optional[str] = Field(None, max_length=100, description="Optional custom label for the connected account")
     additional_config: Optional[Dict[str, Any]] = Field(default_factory=dict, description="Additional metadata")
 
 
