@@ -9,6 +9,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.common.schemas import APIResponse
 from app.dependencies import AuthenticatedUserContext, get_db, require_tenant
+from app.domains.agents import rate_limit
 from app.domains.agents.models import AgentConfig
 from app.domains.agents.schemas import (
     AgentConfigCreate,
@@ -59,6 +60,7 @@ async def generate_instructions(
     user_context: AuthenticatedUserContext = Depends(require_tenant),
 ) -> APIResponse[InstructionBuilderPayload]:
     """Auto-generate an entire agent instruction set from a 1-sentence business description."""
+    await rate_limit.ensure_llm_call_allowed(user_context.organization_id, "generate")
     draft = await AgentService.generate_ai_instructions(payload)
     return APIResponse.ok(data=draft)
 
@@ -82,6 +84,7 @@ async def test_instructions(
     db: AsyncSession = Depends(get_db),
 ) -> APIResponse[InstructionTestResponse]:
     """Test response generation in an isolated sandbox with RAG grounding."""
+    await rate_limit.ensure_llm_call_allowed(user_context.organization_id, "test")
     service = AgentService(db)
     result = await service.simulate_test_response(user_context.organization_id, payload)
     return APIResponse.ok(data=result)

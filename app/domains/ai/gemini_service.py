@@ -61,9 +61,9 @@ async def generate_gemini_response(
         }
     }
 
-    async with httpx.AsyncClient(timeout=12.0) as client:
+    async with httpx.AsyncClient(timeout=12.0, headers={"x-goog-api-key": api_key}) as client:
         for model in GEMINI_MODELS:
-            url = f"https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent?key={api_key}"
+            url = f"https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent"
             try:
                 resp = await client.post(url, json=payload)
                 if resp.status_code == 200:

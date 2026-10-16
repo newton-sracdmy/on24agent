@@ -17,7 +17,7 @@ from sqlalchemy import (
     UniqueConstraint,
     text,
 )
-from sqlalchemy.dialects.postgresql import UUID as PG_UUID
+from sqlalchemy.dialects.postgresql import JSONB, UUID as PG_UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.common.models import (
@@ -91,6 +91,8 @@ class AgentVersion(Base, UUIDPrimaryKeyMixin, TimestampMixin, TenantMixin):
         Boolean, default=False, server_default=text("false"), nullable=False
     )
     published_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), nullable=True)
+    # Instruction Builder Studio form state the prompt was compiled from (null for hand-written versions)
+    builder_config: Mapped[Optional[dict]] = mapped_column(JSONB, nullable=True)
 
     agent_config: Mapped["AgentConfig"] = relationship(
         "AgentConfig", back_populates="versions", foreign_keys=[agent_config_id]

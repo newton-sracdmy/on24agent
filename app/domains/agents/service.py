@@ -36,7 +36,7 @@ from app.domains.agents.schemas import (
 from app.domains.ai.gemini_service import GEMINI_MODELS, generate_gemini_response
 from app.domains.ai.models import LLMModel
 from app.domains.rag.models import KnowledgeBase
-from app.exceptions import ResourceNotFoundError
+from app.exceptions import ResourceConflictError, ResourceNotFoundError
 
 logger = logging.getLogger("agent_service")
 
@@ -241,14 +241,16 @@ class AgentService:
     @staticmethod
     def compile_instruction_prompt(payload: InstructionBuilderPayload) -> InstructionCompileResponse:
         """Compile modular builder configuration into a robust structured markdown prompt."""
+        rules = [r.strip() for r in payload.business_rules if r.strip()]
+        constraints = [d.strip() for d in payload.constraints_donts if d.strip()]
         rules_text = (
-            "\n".join(f"- {r.strip()}" for r in payload.business_rules if r.strip())
-            if payload.business_rules
+            "\n".join(f"- {r}" for r in rules)
+            if rules
             else "None explicitly configured. Follow standard best practices."
         )
         constraints_text = (
-            "\n".join(f"- {d.strip()}" for d in payload.constraints_donts if d.strip())
-            if payload.constraints_donts
+            "\n".join(f"- {d}" for d in constraints)
+            if constraints
             else "None explicitly specified. Maintain professional customer care ethics."
         )
 
@@ -267,7 +269,7 @@ class AgentService:
         compiled_prompt = f"""# ROLE & IDENTITY
 You are {payload.agent_name.strip()}, the official {payload.role_title.strip()}.
 Tone of Voice: {payload.tone_of_voice.strip()}
-Language: {payload.language.strip()} (Always respond fluently in whichever language the user writes: Bengali or English).
+Language: {payload.language.strip()} (Reply in the language the customer writes in when it is one of these; otherwise use the first one listed).
 
 # PRIMARY MISSION & OBJECTIVE
 {payload.primary_mission.strip()}
@@ -325,16 +327,37 @@ Language: {payload.language.strip()} (Always respond fluently in whichever langu
             "Always ground your responses in verified knowledge base facts."
         )
 
-    async def get_builder_state(self, org_id: UUID) -> InstructionStudioResponse:
-        """Fetch the active agent instruction state or default preset for this organization."""
-        query_agent = (
+    async def _find_studio_agent(self, org_id: UUID) -> Optional[AgentConfig]:
+        """Return the agent whose prompt live bots use, else the newest active agent.
+
+        Mirrors get_active_system_prompt so the Studio always edits what customers see.
+        """
+        live_query = (
+            select(AgentConfig)
+            .join(AgentVersion, AgentConfig.current_version_id == AgentVersion.id)
+            .where(
+                AgentConfig.organization_id == org_id,
+                AgentConfig.is_active.is_(True),
+                AgentVersion.is_published.is_(True),
+            )
+            .order_by(AgentVersion.published_at.desc().nullslast())
+            .limit(1)
+        )
+        agent = (await self.session.execute(live_query)).scalar_one_or_none()
+        if agent:
+            return agent
+
+        newest_query = (
             select(AgentConfig)
             .where(AgentConfig.organization_id == org_id, AgentConfig.is_active.is_(True))
             .order_by(AgentConfig.created_at.desc())
             .limit(1)
         )
-        res_agent = await self.session.execute(query_agent)
-        agent = res_agent.scalar_one_or_none()
+        return (await self.session.execute(newest_query)).scalar_one_or_none()
+
+    async def get_builder_state(self, org_id: UUID) -> InstructionStudioResponse:
+        """Fetch the active agent instruction state or default preset for this organization."""
+        agent = await self._find_studio_agent(org_id)
 
         version: Optional[AgentVersion] = None
         compiled_prompt = ""
@@ -345,41 +368,30 @@ Language: {payload.language.strip()} (Always respond fluently in whichever langu
             if version and version.system_prompt:
                 compiled_prompt = version.system_prompt
 
-        # Pick default preset (community preset if techvibe, else ecommerce)
-        default_preset_key = "community" if (agent and "techvibe" in agent.name.lower()) else "ecommerce"
-        preset_data = PRESET_TEMPLATES[default_preset_key]["payload"]
+        if version and version.builder_config:
+            # Restore the exact form state this version was deployed from
+            try:
+                builder_payload = InstructionBuilderPayload(
+                    **{**version.builder_config, "agent_id": agent.id, "agent_name": agent.name}
+                )
+            except ValueError as e:
+                logger.warning(f"Stored builder_config for version {version.id} is invalid: {e}")
+
+        if builder_payload is None:
+            # Pick default preset (community preset if techvibe, else ecommerce)
+            default_preset_key = "community" if (agent and "techvibe" in agent.name.lower()) else "ecommerce"
+            preset_data = PRESET_TEMPLATES[default_preset_key]["payload"]
+            builder_payload = InstructionBuilderPayload(
+                **{**preset_data, "agent_id": agent.id if agent else None,
+                   "agent_name": agent.name if agent else preset_data["agent_name"]}
+            )
 
         if not compiled_prompt:
-            builder_payload = InstructionBuilderPayload(
-                agent_id=agent.id if agent else None,
-                agent_name=agent.name if agent else preset_data["agent_name"],
-                role_title=preset_data["role_title"],
-                tone_of_voice=preset_data["tone_of_voice"],
-                language=preset_data["language"],
-                primary_mission=preset_data["primary_mission"],
-                business_rules=preset_data["business_rules"],
-                constraints_donts=preset_data["constraints_donts"],
-                escalation_protocol=preset_data["escalation_protocol"],
-                greeting_message=preset_data["greeting_message"],
-            )
             compiled_res = self.compile_instruction_prompt(builder_payload)
             compiled_prompt = compiled_res.compiled_prompt
             token_count = compiled_res.estimated_token_count
             word_count = compiled_res.word_count
         else:
-            # We have an existing compiled prompt
-            builder_payload = InstructionBuilderPayload(
-                agent_id=agent.id if agent else None,
-                agent_name=agent.name if agent else preset_data["agent_name"],
-                role_title=preset_data["role_title"],
-                tone_of_voice=preset_data["tone_of_voice"],
-                language=preset_data["language"],
-                primary_mission=preset_data["primary_mission"],
-                business_rules=preset_data["business_rules"],
-                constraints_donts=preset_data["constraints_donts"],
-                escalation_protocol=preset_data["escalation_protocol"],
-                greeting_message=preset_data["greeting_message"],
-            )
             word_count = len(compiled_prompt.split())
             token_count = int(word_count * 1.33) + 4
 
@@ -422,13 +434,13 @@ Language: {payload.language.strip()} (Always respond fluently in whichever langu
                 f"No markdown backticks, no explanations, only raw JSON."
             )
 
-            async with httpx.AsyncClient(timeout=14.0) as client:
+            async with httpx.AsyncClient(timeout=14.0, headers={"x-goog-api-key": api_key}) as client:
                 for model in GEMINI_MODELS:
-                    url = f"https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent?key={api_key}"
+                    url = f"https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent"
                     try:
                         payload = {
                             "contents": [{"role": "user", "parts": [{"text": prompt}]}],
-                            "generationConfig": {"temperature": 0.4, "maxOutputTokens": 800},
+                            "generationConfig": {"temperature": 0.4, "maxOutputTokens": 2048, "responseMimeType": "application/json"},
                         }
                         resp = await client.post(url, json=payload)
                         if resp.status_code == 200:
@@ -495,14 +507,17 @@ Language: {payload.language.strip()} (Always respond fluently in whichever langu
             agent = await self.session.get(AgentConfig, agent_id)
 
         if not agent or agent.organization_id != org_id:
-            query = (
-                select(AgentConfig)
-                .where(AgentConfig.organization_id == org_id, AgentConfig.is_active.is_(True))
-                .order_by(AgentConfig.created_at.desc())
-                .limit(1)
+            agent = await self._find_studio_agent(org_id)
+
+        name_taken = await self.session.execute(
+            select(AgentConfig.id).where(
+                AgentConfig.organization_id == org_id,
+                AgentConfig.name == data.agent_name,
+                AgentConfig.id != (agent.id if agent else None),
             )
-            res = await self.session.execute(query)
-            agent = res.scalar_one_or_none()
+        )
+        if name_taken.first():
+            raise ResourceConflictError(f"Another agent in this workspace is already named '{data.agent_name}'")
 
         if not agent:
             agent = AgentConfig(
@@ -545,17 +560,20 @@ Language: {payload.language.strip()} (Always respond fluently in whichever langu
         new_ver_num = latest_ver_num + 1
 
         # 4. Create and publish new AgentVersion
+        system_prompt = data.compiled_prompt or self.compile_instruction_prompt(data.builder_payload).compiled_prompt
+        builder_config = data.builder_payload.model_dump(mode="json", exclude={"agent_id", "agent_name"})
         now = datetime.now(timezone.utc)
         version = AgentVersion(
             organization_id=org_id,
             agent_config_id=agent.id,
             version_number=new_ver_num,
-            system_prompt=data.compiled_prompt,
+            system_prompt=system_prompt,
             model_id=model_id,
             temperature=0.7,
             max_tokens=1024,
             is_published=True,
             published_at=now,
+            builder_config=builder_config,
         )
         self.session.add(version)
         await self.session.flush()
@@ -593,7 +611,7 @@ Language: {payload.language.strip()} (Always respond fluently in whichever langu
         self, org_id: UUID, request: InstructionTestRequest
     ) -> InstructionTestResponse:
         """Simulate how the agent responds in the sandbox with draft prompt and RAG grounding."""
-        # Fetch knowledge chunks for this organization
+        # Same knowledge context the live channel bots use, so the preview matches production
         q_chunks = await self.session.execute(
             text(
                 """
@@ -601,11 +619,11 @@ Language: {payload.language.strip()} (Always respond fluently in whichever langu
                 FROM document_chunks dc
                 JOIN documents d ON d.id = dc.document_id
                 WHERE dc.organization_id = :org_id
-                ORDER BY dc.created_at DESC
-                LIMIT 6;
+                  AND (CAST(:kb_id AS uuid) IS NULL OR d.knowledge_base_id = CAST(:kb_id AS uuid))
+                ORDER BY dc.created_at DESC;
                 """
             ),
-            {"org_id": org_id},
+            {"org_id": org_id, "kb_id": str(request.knowledge_base_id) if request.knowledge_base_id else None},
         )
         chunk_rows = q_chunks.mappings().all()
         kb_context = "\n\n".join([f"[{r['title']}]: {r['content_text']}" for r in chunk_rows])
@@ -623,34 +641,24 @@ Language: {payload.language.strip()} (Always respond fluently in whichever langu
                 grounded_kb_chunks_count=len(chunk_rows),
             )
 
-        # Fallback simulation if LLM is unavailable or quota limited
-        lower_q = request.test_message.lower()
-        if "pricing" in lower_q or "cost" in lower_q or "fee" in lower_q or "price" in lower_q or "দাম" in lower_q:
+        # LLM unavailable: answer only from the org's own knowledge, never from made-up policy
+        q_words = {w for w in re.findall(r"\w+", request.test_message.lower()) if len(w) > 2}
+        best_chunk = None
+        best_score = 0
+        for row in chunk_rows:
+            chunk_lower = row["content_text"].lower()
+            score = sum(1 for w in q_words if w in chunk_lower)
+            if score > best_score:
+                best_score, best_chunk = score, row
+        if best_chunk:
             simulated_text = (
-                "Based on our active policy, here are our standard rates: "
-                "Solo Plan is $39/mo, Standard Plan is $149/mo, and Business Plan is $529/mo with dedicated AI tokens. "
-                "Let me know if you would like me to assist you with onboarding!"
-            )
-        elif "refund" in lower_q or "return" in lower_q or "ফেরত" in lower_q:
-            simulated_text = (
-                "Our policy includes a 7-day money-back guarantee for unused subscriptions, and a 7-day hassle-free "
-                "replacement policy for physical parcels. Please provide your order or account ID to proceed."
-            )
-        elif "hi" in lower_q or "hello" in lower_q or "salam" in lower_q or "কেমন" in lower_q:
-            simulated_text = (
-                "Hello there! 👋 I am your AI assistant, ready to help you with product queries, order tracking, "
-                "and membership support. How can I assist you right now?"
-            )
-        elif chunk_rows:
-            # Extractive chunk match
-            simulated_text = (
-                f"Regarding your query: {chunk_rows[0]['content_text'][:280]}... "
-                f"Please let me know if you would like more specific details!"
+                f"(Offline preview — AI model unavailable) Closest knowledge base match from "
+                f"\"{best_chunk['title']}\":\n\n{best_chunk['content_text'][:500]}"
             )
         else:
             simulated_text = (
-                f"Thank you for contacting us! I have processed your inquiry: '{request.test_message}'. "
-                f"Following our active operating guidelines, I'm here to ensure you receive prompt, accurate assistance."
+                "(Offline preview — AI model unavailable) No matching knowledge base content was found for this "
+                "message. Please try again shortly."
             )
 
         return InstructionTestResponse(

@@ -4,7 +4,7 @@ from datetime import datetime
 from typing import Any, Dict, List, Optional
 from uuid import UUID
 
-from pydantic import Field
+from pydantic import Field, field_validator
 
 from app.common.schemas import BaseSchema
 from app.constants import AgentExecutionMode, AgentRunStatus, GuardrailAction
@@ -66,18 +66,45 @@ class AgentRunResponse(BaseSchema):
 # Instruction Builder Schemas
 # ==============================================================================
 
+MAX_LIST_ITEMS = 25
+MAX_LIST_ITEM_LENGTH = 500
+MAX_PROMPT_LENGTH = 20000
+
+
 class InstructionBuilderPayload(BaseSchema):
     """Modular components defining an AI Agent's persona and behavioral rules."""
     agent_id: Optional[UUID] = None
     agent_name: str = Field(..., min_length=2, max_length=100)
     role_title: str = Field(..., min_length=2, max_length=100)
-    tone_of_voice: str = Field("Friendly & Empathetic", max_length=100)
-    language: str = Field("Bengali & English", max_length=100)
-    primary_mission: str = Field(..., min_length=5)
-    business_rules: List[str] = Field(default_factory=list)
-    constraints_donts: List[str] = Field(default_factory=list)
-    escalation_protocol: Optional[str] = None
-    greeting_message: Optional[str] = None
+    tone_of_voice: str = Field("Friendly & Empathetic", min_length=2, max_length=100)
+    language: str = Field("Bengali & English", min_length=2, max_length=100)
+    primary_mission: str = Field(..., min_length=5, max_length=2000)
+    business_rules: List[str] = Field(default_factory=list, max_length=MAX_LIST_ITEMS)
+    constraints_donts: List[str] = Field(default_factory=list, max_length=MAX_LIST_ITEMS)
+    escalation_protocol: Optional[str] = Field(None, max_length=1000)
+    greeting_message: Optional[str] = Field(None, max_length=1000)
+
+    @field_validator("agent_name", "role_title", "tone_of_voice", "language", "primary_mission", mode="before")
+    @classmethod
+    def _strip_required(cls, v: Any) -> Any:
+        # Strip before length checks so whitespace-only values are rejected
+        return v.strip() if isinstance(v, str) else v
+
+    @field_validator("escalation_protocol", "greeting_message", mode="before")
+    @classmethod
+    def _strip_optional(cls, v: Any) -> Any:
+        if isinstance(v, str):
+            return v.strip() or None
+        return v
+
+    @field_validator("business_rules", "constraints_donts")
+    @classmethod
+    def _clean_items(cls, items: List[str]) -> List[str]:
+        cleaned = [item.strip() for item in items if item and item.strip()]
+        for item in cleaned:
+            if len(item) > MAX_LIST_ITEM_LENGTH:
+                raise ValueError(f"Each item must be at most {MAX_LIST_ITEM_LENGTH} characters")
+        return cleaned
 
 
 class InstructionCompileResponse(BaseSchema):
@@ -98,14 +125,35 @@ class InstructionDeployRequest(BaseSchema):
     """Payload to save and publish an instruction set to live bots."""
     agent_name: str = Field(..., min_length=2, max_length=100)
     builder_payload: InstructionBuilderPayload
-    compiled_prompt: str
+    # Omit to have the server compile builder_payload; send it to deploy a hand-edited prompt
+    compiled_prompt: Optional[str] = Field(None, max_length=MAX_PROMPT_LENGTH)
+
+    @field_validator("agent_name", mode="before")
+    @classmethod
+    def _strip_name(cls, v: Any) -> Any:
+        return v.strip() if isinstance(v, str) else v
+
+    @field_validator("compiled_prompt")
+    @classmethod
+    def _non_trivial_prompt(cls, v: Optional[str]) -> Optional[str]:
+        if v is None:
+            return v
+        v = v.strip()
+        if len(v) < 20:
+            raise ValueError("compiled_prompt must be at least 20 characters; omit it to compile server-side")
+        return v
 
 
 class InstructionTestRequest(BaseSchema):
     """Sandbox simulation request to test how the agent responds."""
-    test_message: str = Field(..., min_length=1)
-    draft_prompt: str = Field(..., min_length=10)
+    test_message: str = Field(..., min_length=1, max_length=2000)
+    draft_prompt: str = Field(..., min_length=10, max_length=MAX_PROMPT_LENGTH)
     knowledge_base_id: Optional[UUID] = None
+
+    @field_validator("test_message", mode="before")
+    @classmethod
+    def _strip_message(cls, v: Any) -> Any:
+        return v.strip() if isinstance(v, str) else v
 
 
 class InstructionTestResponse(BaseSchema):
