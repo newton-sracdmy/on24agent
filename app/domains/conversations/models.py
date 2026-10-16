@@ -32,7 +32,6 @@ from app.constants import (
     MessageContentType,
     MessageDeliveryStatus,
     MessageSenderType,
-    RoutingStrategy,
     SLABreachStatus,
     SLAPriorityTier,
 )
@@ -48,56 +47,8 @@ class Team(Base, UUIDPrimaryKeyMixin, TimestampMixin, TenantMixin):
         Boolean, default=True, server_default=text("true"), nullable=False
     )
 
-    members: Mapped[List["TeamMember"]] = relationship(
-        "TeamMember", back_populates="team", cascade="all, delete-orphan"
-    )
-
     __table_args__ = (
         UniqueConstraint("organization_id", "name", name="uq_org_team_name"),
-    )
-
-
-class TeamMember(Base, UUIDPrimaryKeyMixin, TimestampMixin, TenantMixin):
-    __tablename__ = "team_members"
-
-    team_id: Mapped[UUID] = mapped_column(
-        PG_UUID(as_uuid=True),
-        ForeignKey("teams.id", ondelete="CASCADE"),
-        nullable=False,
-        index=True,
-    )
-    user_id: Mapped[UUID] = mapped_column(
-        PG_UUID(as_uuid=True),
-        ForeignKey("users.id", ondelete="CASCADE"),
-        nullable=False,
-        index=True,
-    )
-    is_team_lead: Mapped[bool] = mapped_column(
-        Boolean, default=False, server_default=text("false"), nullable=False
-    )
-
-    team: Mapped["Team"] = relationship("Team", back_populates="members")
-    user: Mapped["User"] = relationship("User")
-
-    __table_args__ = (
-        UniqueConstraint("team_id", "user_id", name="uq_team_member"),
-    )
-
-
-class BusinessHours(Base, UUIDPrimaryKeyMixin, TimestampMixin, TenantMixin):
-    """Working schedules used for SLA calculation and out-of-hours automation."""
-    __tablename__ = "business_hours"
-
-    name: Mapped[str] = mapped_column(String(100), default="Default Hours", nullable=False)
-    timezone: Mapped[str] = mapped_column(String(50), default="UTC", nullable=False)
-    schedule_json: Mapped[dict] = mapped_column(
-        JSONB,
-        default=dict,
-        server_default=text("'{\"monday\": {\"start\": \"09:00\", \"end\": \"18:00\"}}'::jsonb"),
-        nullable=False,
-    )
-    holidays_json: Mapped[list] = mapped_column(
-        JSONB, default=list, server_default=text("'[]'::jsonb"), nullable=False
     )
 
 
@@ -124,32 +75,6 @@ class SLAPolicy(Base, UUIDPrimaryKeyMixin, TimestampMixin, TenantMixin):
     )
     escalation_rule_json: Mapped[dict] = mapped_column(
         JSONB, default=dict, server_default=text("'{}'::jsonb"), nullable=False
-    )
-    is_active: Mapped[bool] = mapped_column(
-        Boolean, default=True, server_default=text("true"), nullable=False
-    )
-
-
-class RoutingRule(Base, UUIDPrimaryKeyMixin, TimestampMixin, TenantMixin):
-    """Automated conversation routing logic (round-robin, skill-based, AI-first)."""
-    __tablename__ = "routing_rules"
-
-    name: Mapped[str] = mapped_column(String(100), nullable=False)
-    priority_order: Mapped[int] = mapped_column(Integer, default=1, nullable=False)
-    conditions_json: Mapped[dict] = mapped_column(
-        JSONB, default=dict, server_default=text("'{}'::jsonb"), nullable=False
-    )
-    strategy: Mapped[str] = mapped_column(
-        String(50),
-        default=RoutingStrategy.AI_FIRST.value,
-        server_default=text("'ai_first'"),
-        nullable=False,
-    )
-    target_team_id: Mapped[Optional[UUID]] = mapped_column(
-        PG_UUID(as_uuid=True), ForeignKey("teams.id", ondelete="SET NULL"), nullable=True
-    )
-    target_user_id: Mapped[Optional[UUID]] = mapped_column(
-        PG_UUID(as_uuid=True), ForeignKey("users.id", ondelete="SET NULL"), nullable=True
     )
     is_active: Mapped[bool] = mapped_column(
         Boolean, default=True, server_default=text("true"), nullable=False
@@ -285,9 +210,6 @@ class Message(Base, UUIDPrimaryKeyMixin, TimestampMixin, TenantMixin):
     attachments: Mapped[List["MessageAttachment"]] = relationship(
         "MessageAttachment", back_populates="message", cascade="all, delete-orphan", lazy="selectin"
     )
-    reactions: Mapped[List["MessageReaction"]] = relationship(
-        "MessageReaction", back_populates="message", cascade="all, delete-orphan", lazy="selectin"
-    )
 
     __table_args__ = (
         Index("ix_messages_conv_created", "conversation_id", "created_at"),
@@ -310,22 +232,6 @@ class MessageAttachment(Base, UUIDPrimaryKeyMixin, TimestampMixin, TenantMixin):
     mime_type: Mapped[str] = mapped_column(String(100), nullable=False)
 
     message: Mapped["Message"] = relationship("Message", back_populates="attachments")
-
-
-class MessageReaction(Base, UUIDPrimaryKeyMixin, TimestampMixin, TenantMixin):
-    __tablename__ = "message_reactions"
-
-    message_id: Mapped[UUID] = mapped_column(
-        PG_UUID(as_uuid=True),
-        ForeignKey("messages.id", ondelete="CASCADE"),
-        nullable=False,
-        index=True,
-    )
-    user_id: Mapped[Optional[UUID]] = mapped_column(PG_UUID(as_uuid=True), nullable=True)
-    contact_id: Mapped[Optional[UUID]] = mapped_column(PG_UUID(as_uuid=True), nullable=True)
-    reaction_emoji: Mapped[str] = mapped_column(String(10), nullable=False)
-
-    message: Mapped["Message"] = relationship("Message", back_populates="reactions")
 
 
 class CannedResponse(Base, UUIDPrimaryKeyMixin, TimestampMixin, TenantMixin):
@@ -368,27 +274,3 @@ class SatisfactionRating(Base, UUIDPrimaryKeyMixin, TimestampMixin, TenantMixin)
     feedback_comment: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
     survey_sent_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
     rated_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), nullable=True)
-
-
-class Notification(Base, UUIDPrimaryKeyMixin, TimestampMixin, TenantMixin):
-    """In-app alert for agents (e.g. SLA breach warning, assignment, new message)."""
-    __tablename__ = "notifications"
-
-    user_id: Mapped[UUID] = mapped_column(
-        PG_UUID(as_uuid=True),
-        ForeignKey("users.id", ondelete="CASCADE"),
-        nullable=False,
-        index=True,
-    )
-    title: Mapped[str] = mapped_column(String(255), nullable=False)
-    message: Mapped[str] = mapped_column(Text, nullable=False)
-    notification_type: Mapped[str] = mapped_column(String(50), nullable=False)
-    action_url: Mapped[Optional[str]] = mapped_column(String(1024), nullable=True)
-    is_read: Mapped[bool] = mapped_column(
-        Boolean, default=False, server_default=text("false"), nullable=False
-    )
-    read_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), nullable=True)
-
-    __table_args__ = (
-        Index("ix_notifications_user_read", "user_id", "is_read"),
-    )

@@ -27,7 +27,6 @@ from app.common.models import (
     UUIDPrimaryKeyMixin,
 )
 from app.constants import (
-    ChunkingStrategy,
     DocumentSourceType,
     IngestionJobStatus,
     VectorDistanceMetric,
@@ -152,56 +151,6 @@ class DocumentChunk(Base, UUIDPrimaryKeyMixin, TimestampMixin, TenantMixin):
     __table_args__ = (
         Index("ix_chunks_org_doc", "organization_id", "document_id"),
     )
-
-
-class IngestionJob(Base, UUIDPrimaryKeyMixin, TimestampMixin, TenantMixin):
-    """Async background worker job parsing, chunking, and embedding documents."""
-    __tablename__ = "ingestion_jobs"
-
-    document_id: Mapped[UUID] = mapped_column(
-        PG_UUID(as_uuid=True),
-        ForeignKey("documents.id", ondelete="CASCADE"),
-        nullable=False,
-        index=True,
-    )
-    status: Mapped[str] = mapped_column(
-        String(50),
-        default=IngestionJobStatus.PENDING.value,
-        server_default=text("'pending'"),
-        nullable=False,
-    )
-    chunking_strategy: Mapped[str] = mapped_column(
-        String(50),
-        default=ChunkingStrategy.PARAGRAPH_AWARE.value,
-        server_default=text("'paragraph_aware'"),
-        nullable=False,
-    )
-    chunk_size: Mapped[int] = mapped_column(Integer, default=500, nullable=False)
-    chunk_overlap: Mapped[int] = mapped_column(Integer, default=50, nullable=False)
-    total_chunks: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
-    processed_chunks: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
-    started_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), nullable=True)
-    completed_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), nullable=True)
-
-    errors: Mapped[List["IngestionError"]] = relationship(
-        "IngestionError", back_populates="ingestion_job", cascade="all, delete-orphan"
-    )
-
-
-class IngestionError(Base, UUIDPrimaryKeyMixin, TimestampMixin, TenantMixin):
-    __tablename__ = "ingestion_errors"
-
-    ingestion_job_id: Mapped[UUID] = mapped_column(
-        PG_UUID(as_uuid=True),
-        ForeignKey("ingestion_jobs.id", ondelete="CASCADE"),
-        nullable=False,
-        index=True,
-    )
-    error_phase: Mapped[str] = mapped_column(String(50), nullable=False)  # extraction, chunking, embedding
-    error_message: Mapped[str] = mapped_column(Text, nullable=False)
-    stack_trace: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
-
-    ingestion_job: Mapped["IngestionJob"] = relationship("IngestionJob", back_populates="errors")
 
 
 class KnowledgeGap(Base, UUIDPrimaryKeyMixin, TimestampMixin, TenantMixin):

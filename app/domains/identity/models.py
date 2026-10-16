@@ -26,7 +26,6 @@ from app.common.models import (
 )
 from app.constants import (
     AgentOnlineStatus,
-    InvitationStatus,
     MembershipRole,
     OrganizationStatus,
     UserStatus,
@@ -253,40 +252,3 @@ class RefreshToken(Base, UUIDPrimaryKeyMixin, TimestampMixin):
     )
 
     session: Mapped["Session"] = relationship("Session", back_populates="refresh_tokens")
-
-
-class Invitation(Base, UUIDPrimaryKeyMixin, TimestampMixin):
-    __tablename__ = "invitations"
-
-    organization_id: Mapped[UUID] = mapped_column(
-        PG_UUID(as_uuid=True),
-        ForeignKey("organizations.id", ondelete="CASCADE"),
-        nullable=False,
-        index=True,
-    )
-    email: Mapped[str] = mapped_column(String(255), nullable=False, index=True)
-    role_id: Mapped[UUID] = mapped_column(
-        PG_UUID(as_uuid=True),
-        ForeignKey("roles.id", ondelete="RESTRICT"),
-        nullable=False,
-    )
-    token_hash: Mapped[str] = mapped_column(String(255), unique=True, index=True, nullable=False)
-    status: Mapped[str] = mapped_column(
-        String(50),
-        default=InvitationStatus.PENDING.value,
-        server_default=text("'pending'"),
-        nullable=False,
-    )
-    expires_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
-    created_by: Mapped[Optional[UUID]] = mapped_column(
-        PG_UUID(as_uuid=True),
-        ForeignKey("users.id", ondelete="SET NULL"),
-        nullable=True,
-    )
-
-    organization: Mapped["Organization"] = relationship("Organization")
-    role: Mapped["Role"] = relationship("Role")
-
-    __table_args__ = (
-        Index("ix_invitations_org_email", "organization_id", "email"),
-    )

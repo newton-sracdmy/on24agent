@@ -74,38 +74,8 @@ class ChannelAccount(Base, UUIDPrimaryKeyMixin, TimestampMixin, TenantMixin, Sof
     )
 
     channel: Mapped["Channel"] = relationship("Channel", back_populates="accounts")
-    capabilities: Mapped[List["ChannelAccountCapability"]] = relationship(
-        "ChannelAccountCapability", back_populates="channel_account", cascade="all, delete-orphan"
-    )
 
     __table_args__ = (
         UniqueConstraint("organization_id", "channel_id", "account_identifier", name="uq_org_channel_account"),
         Index("ix_channel_accounts_org_status", "organization_id", "status"),
-    )
-
-
-class ChannelAccountCapability(Base, UUIDPrimaryKeyMixin, TimestampMixin, TenantMixin):
-    """Specific capabilities enabled on a tenant channel account."""
-    __tablename__ = "channel_account_capabilities"
-
-    channel_account_id: Mapped[UUID] = mapped_column(
-        PG_UUID(as_uuid=True),
-        ForeignKey("channel_accounts.id", ondelete="CASCADE"),
-        nullable=False,
-        index=True,
-    )
-    capability: Mapped[str] = mapped_column(String(100), nullable=False)
-    is_enabled: Mapped[bool] = mapped_column(
-        Boolean, default=True, server_default=text("true"), nullable=False
-    )
-    configuration: Mapped[dict] = mapped_column(
-        JSONB, default=dict, server_default=text("'{}'::jsonb"), nullable=False
-    )
-
-    channel_account: Mapped["ChannelAccount"] = relationship(
-        "ChannelAccount", back_populates="capabilities"
-    )
-
-    __table_args__ = (
-        UniqueConstraint("channel_account_id", "capability", name="uq_channel_capability"),
     )

@@ -1,7 +1,7 @@
 """SQLAlchemy models for WhatsApp Templates, Audience Segments, Broadcast Campaigns, and Delivery Tracking."""
 
 from datetime import datetime, timezone
-from typing import List, Optional
+from typing import Optional
 from uuid import UUID
 
 from sqlalchemy import (
@@ -16,7 +16,7 @@ from sqlalchemy import (
     text,
 )
 from sqlalchemy.dialects.postgresql import JSONB, UUID as PG_UUID
-from sqlalchemy.orm import Mapped, mapped_column, relationship
+from sqlalchemy.orm import Mapped, mapped_column
 
 from app.common.models import (
     Base,
@@ -25,7 +25,6 @@ from app.common.models import (
     UUIDPrimaryKeyMixin,
 )
 from app.constants import (
-    CampaignRecipientStatus,
     CampaignStatus,
     TemplateApprovalStatus,
     TemplateCategory,
@@ -125,43 +124,3 @@ class Campaign(Base, UUIDPrimaryKeyMixin, TimestampMixin, TenantMixin):
     read_count: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
     failed_count: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
     estimated_cost: Mapped[float] = mapped_column(Numeric(10, 4), default=0.0, nullable=False)
-
-    recipients: Mapped[List["CampaignRecipient"]] = relationship(
-        "CampaignRecipient", back_populates="campaign", cascade="all, delete-orphan"
-    )
-
-
-class CampaignRecipient(Base, UUIDPrimaryKeyMixin, TimestampMixin, TenantMixin):
-    """Individual contact target within a campaign broadcast."""
-    __tablename__ = "campaign_recipients"
-
-    campaign_id: Mapped[UUID] = mapped_column(
-        PG_UUID(as_uuid=True),
-        ForeignKey("campaigns.id", ondelete="CASCADE"),
-        nullable=False,
-        index=True,
-    )
-    contact_id: Mapped[UUID] = mapped_column(
-        PG_UUID(as_uuid=True),
-        ForeignKey("contacts.id", ondelete="CASCADE"),
-        nullable=False,
-        index=True,
-    )
-    status: Mapped[str] = mapped_column(
-        String(50),
-        default=CampaignRecipientStatus.PENDING.value,
-        server_default=text("'pending'"),
-        nullable=False,
-        index=True,
-    )
-    error_code: Mapped[Optional[str]] = mapped_column(String(50), nullable=True)
-    error_message: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
-    sent_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), nullable=True)
-    delivered_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), nullable=True)
-    read_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), nullable=True)
-
-    campaign: Mapped["Campaign"] = relationship("Campaign", back_populates="recipients")
-
-    __table_args__ = (
-        UniqueConstraint("campaign_id", "contact_id", name="uq_campaign_recipient"),
-    )
