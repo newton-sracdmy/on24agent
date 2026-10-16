@@ -25,7 +25,7 @@ router = APIRouter()
 async def create_contact(
     payload: ContactCreate,
     user_context: AuthenticatedUserContext = Depends(require_tenant),
-    db: AsyncSession = Depends(get_db),
+    db: AsyncSession = Depends(get_db, scope="function"),
 ) -> APIResponse[ContactResponse]:
     """Create a new customer contact profile."""
     service = ContactService(db)
@@ -40,7 +40,7 @@ async def list_contacts(
     page: int = Query(1, ge=1),
     page_size: int = Query(20, ge=1, le=100),
     user_context: AuthenticatedUserContext = Depends(require_tenant),
-    db: AsyncSession = Depends(get_db),
+    db: AsyncSession = Depends(get_db, scope="function"),
 ) -> APIResponse[PaginatedResponse[ContactResponse]]:
     """List contacts with offset pagination."""
     service = ContactService(db)
@@ -56,7 +56,7 @@ async def list_contacts(
 async def get_contact(
     contact_id: UUID,
     user_context: AuthenticatedUserContext = Depends(require_tenant),
-    db: AsyncSession = Depends(get_db),
+    db: AsyncSession = Depends(get_db, scope="function"),
 ) -> APIResponse[ContactResponse]:
     """Retrieve full details of a specific contact."""
     service = ContactService(db)
@@ -71,7 +71,7 @@ async def update_contact(
     contact_id: UUID,
     payload: ContactUpdate,
     user_context: AuthenticatedUserContext = Depends(require_tenant),
-    db: AsyncSession = Depends(get_db),
+    db: AsyncSession = Depends(get_db, scope="function"),
 ) -> APIResponse[ContactResponse]:
     """Update contact attributes, lifecycle stage, or metadata."""
     service = ContactService(db)

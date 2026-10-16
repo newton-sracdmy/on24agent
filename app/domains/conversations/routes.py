@@ -26,7 +26,7 @@ router = APIRouter()
 async def create_conversation(
     payload: ConversationCreate,
     user_context: AuthenticatedUserContext = Depends(require_tenant),
-    db: AsyncSession = Depends(get_db),
+    db: AsyncSession = Depends(get_db, scope="function"),
 ) -> APIResponse[ConversationResponse]:
     """Start an outbound customer conversation thread."""
     service = ConversationService(db)
@@ -39,7 +39,7 @@ async def list_conversations(
     page: int = Query(1, ge=1),
     page_size: int = Query(20, ge=1, le=100),
     user_context: AuthenticatedUserContext = Depends(require_tenant),
-    db: AsyncSession = Depends(get_db),
+    db: AsyncSession = Depends(get_db, scope="function"),
 ) -> APIResponse[PaginatedResponse[ConversationResponse]]:
     """List omnichannel conversation inbox feeds."""
     service = ConversationService(db)
@@ -55,7 +55,7 @@ async def list_conversations(
 async def get_conversation(
     conversation_id: UUID,
     user_context: AuthenticatedUserContext = Depends(require_tenant),
-    db: AsyncSession = Depends(get_db),
+    db: AsyncSession = Depends(get_db, scope="function"),
 ) -> APIResponse[ConversationResponse]:
     """Retrieve full conversation details and status."""
     service = ConversationService(db)
@@ -70,7 +70,7 @@ async def send_message(
     conversation_id: UUID,
     payload: MessageCreate,
     user_context: AuthenticatedUserContext = Depends(require_tenant),
-    db: AsyncSession = Depends(get_db),
+    db: AsyncSession = Depends(get_db, scope="function"),
 ) -> APIResponse[MessageResponse]:
     """Send an outbound message from an agent to the customer."""
     service = ConversationService(db)
@@ -89,7 +89,7 @@ async def list_messages(
     conversation_id: UUID,
     limit: int = Query(50, ge=1, le=100),
     user_context: AuthenticatedUserContext = Depends(require_tenant),
-    db: AsyncSession = Depends(get_db),
+    db: AsyncSession = Depends(get_db, scope="function"),
 ) -> APIResponse[List[MessageResponse]]:
     """List message history within a conversation."""
     service = ConversationService(db)
@@ -102,7 +102,7 @@ async def list_messages(
 async def resolve_conversation(
     conversation_id: UUID,
     user_context: AuthenticatedUserContext = Depends(require_tenant),
-    db: AsyncSession = Depends(get_db),
+    db: AsyncSession = Depends(get_db, scope="function"),
 ) -> APIResponse[ConversationResponse]:
     """Resolve a conversation and trigger post-chat CSAT feedback survey."""
     service = ConversationService(db)

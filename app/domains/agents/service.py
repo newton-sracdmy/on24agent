@@ -8,7 +8,7 @@ from typing import Any, Dict, List, Optional
 from uuid import UUID
 
 import httpx
-from sqlalchemy import select, text
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.config import settings
@@ -36,6 +36,7 @@ from app.domains.agents.schemas import (
 from app.domains.ai.gemini_service import GEMINI_MODELS, generate_gemini_response
 from app.domains.ai.models import LLMModel
 from app.domains.rag.models import KnowledgeBase
+from app.domains.rag.service import RAGService
 from app.exceptions import ResourceConflictError, ResourceNotFoundError
 
 logger = logging.getLogger("agent_service")
@@ -533,9 +534,10 @@ Language: {payload.language.strip()} (Reply in the language the customer writes 
             agent.name = data.agent_name
 
         # 2. Find an active LLM Model
+        # Embedding models cannot generate replies
         query_model = (
             select(LLMModel.id)
-            .where(LLMModel.is_active.is_(True))
+            .where(LLMModel.is_active.is_(True), LLMModel.modality != "embedding")
             .order_by(LLMModel.created_at.desc())
             .limit(1)
         )
@@ -543,7 +545,9 @@ Language: {payload.language.strip()} (Reply in the language the customer writes 
         model_id = res_model.scalar()
 
         if not model_id:
-            res_any = await self.session.execute(select(LLMModel.id).limit(1))
+            res_any = await self.session.execute(
+                select(LLMModel.id).where(LLMModel.modality != "embedding").limit(1)
+            )
             model_id = res_any.scalar()
 
         if not model_id:
@@ -611,22 +615,12 @@ Language: {payload.language.strip()} (Reply in the language the customer writes 
         self, org_id: UUID, request: InstructionTestRequest
     ) -> InstructionTestResponse:
         """Simulate how the agent responds in the sandbox with draft prompt and RAG grounding."""
-        # Same knowledge context the live channel bots use, so the preview matches production
-        q_chunks = await self.session.execute(
-            text(
-                """
-                SELECT dc.content_text, d.title
-                FROM document_chunks dc
-                JOIN documents d ON d.id = dc.document_id
-                WHERE dc.organization_id = :org_id
-                  AND (CAST(:kb_id AS uuid) IS NULL OR d.knowledge_base_id = CAST(:kb_id AS uuid))
-                ORDER BY dc.created_at DESC;
-                """
-            ),
-            {"org_id": org_id, "kb_id": str(request.knowledge_base_id) if request.knowledge_base_id else None},
+        # Same retrieval the live channel bots use, so the preview matches production
+        retrieval = await RAGService.retrieve_context(
+            self.session, org_id, request.test_message, kb_id=request.knowledge_base_id
         )
-        chunk_rows = q_chunks.mappings().all()
-        kb_context = "\n\n".join([f"[{r['title']}]: {r['content_text']}" for r in chunk_rows])
+        chunk_rows = retrieval.chunks
+        kb_context = retrieval.as_context()
 
         ai_reply = await generate_gemini_response(
             user_query=request.test_message,

@@ -1,7 +1,8 @@
 """Google Gemini LLM Service for Generative Conversational AI with RAG Grounding."""
 
 import logging
-from typing import List, Optional
+import re
+from typing import List, Optional, Tuple
 import httpx
 from app.config import settings
 
@@ -25,11 +26,12 @@ async def generate_gemini_response(
     grounded_instruction = (
         f"{system_prompt}\n\n"
         f"KNOWLEDGE BASE CONTEXT (Always ground your answers in these official facts):\n"
-        f"{kb_context if kb_context else 'No specific document chunks found. Answer based on community rules and be polite.'}\n\n"
+        f"{kb_context if kb_context else 'No relevant knowledge base documents were found for this message.'}\n\n"
         f"INSTRUCTIONS:\n"
         f"1. Be friendly, concise, and helpful.\n"
         f"2. Respond in the same language the user uses (Bengali or English).\n"
-        f"3. Strictly respect the community rules, membership fees, and refund policies given in the knowledge context.\n"
+        f"3. Strictly follow the prices, policies and facts given in the knowledge context. Never invent prices, "
+        f"policies, dates or contact details that are not in it.\n"
         f"4. Keep the response formatted neatly for mobile messaging (WhatsApp/Messenger)."
     )
 
@@ -82,3 +84,31 @@ async def generate_gemini_response(
 
     logger.error("All candidate Gemini models failed to generate a response.")
     return None
+
+
+NO_KB_ANSWER_MARKER = "[[NO_KB_ANSWER]]"
+_NO_KB_ANSWER_RE = re.compile(r"\[\[\s*NO_KB_ANSWER\s*\]\]", re.IGNORECASE)
+
+
+async def generate_grounded_reply(
+    user_query: str,
+    system_prompt: str,
+    kb_context: str = "",
+    chat_history: Optional[List[dict]] = None,
+) -> Tuple[Optional[str], Optional[bool]]:
+    """Generate a customer reply and report whether the knowledge base covered the question.
+
+    Returns (reply, kb_covered). kb_covered is None when the model is unavailable.
+    """
+    gap_instruction = (
+        f"{system_prompt}\n\n"
+        f"KNOWLEDGE GAP REPORTING: If the customer asks something about the business that the knowledge base "
+        f"context does not answer, reply helpfully without inventing facts and end your reply with the exact token "
+        f"{NO_KB_ANSWER_MARKER}. Do not add the token for greetings, thanks, or small talk."
+    )
+    reply = await generate_gemini_response(user_query, gap_instruction, kb_context, chat_history)
+    if not reply:
+        return None, None
+    kb_covered = not _NO_KB_ANSWER_RE.search(reply)
+    cleaned = _NO_KB_ANSWER_RE.sub("", reply).strip()
+    return (cleaned or None), kb_covered

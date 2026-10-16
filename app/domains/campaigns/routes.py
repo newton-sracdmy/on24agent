@@ -27,7 +27,7 @@ router = APIRouter()
 async def create_template(
     payload: MessageTemplateCreate,
     user_context: AuthenticatedUserContext = Depends(require_tenant),
-    db: AsyncSession = Depends(get_db),
+    db: AsyncSession = Depends(get_db, scope="function"),
 ) -> APIResponse[MessageTemplateResponse]:
     """Create a WhatsApp Cloud API HSM message template for Meta review."""
     service = CampaignService(db)
@@ -38,7 +38,7 @@ async def create_template(
 @router.get("/templates", response_model=APIResponse[List[MessageTemplateResponse]])
 async def list_templates(
     user_context: AuthenticatedUserContext = Depends(require_tenant),
-    db: AsyncSession = Depends(get_db),
+    db: AsyncSession = Depends(get_db, scope="function"),
 ) -> APIResponse[List[MessageTemplateResponse]]:
     """List WhatsApp message templates."""
     query = select(MessageTemplate).where(MessageTemplate.organization_id == user_context.organization_id)
@@ -51,7 +51,7 @@ async def list_templates(
 async def create_segment(
     payload: CampaignSegmentCreate,
     user_context: AuthenticatedUserContext = Depends(require_tenant),
-    db: AsyncSession = Depends(get_db),
+    db: AsyncSession = Depends(get_db, scope="function"),
 ) -> APIResponse[CampaignSegmentResponse]:
     """Define dynamic target segment for broadcasts."""
     service = CampaignService(db)
@@ -63,7 +63,7 @@ async def create_segment(
 async def create_campaign(
     payload: CampaignCreate,
     user_context: AuthenticatedUserContext = Depends(require_tenant),
-    db: AsyncSession = Depends(get_db),
+    db: AsyncSession = Depends(get_db, scope="function"),
 ) -> APIResponse[CampaignResponse]:
     """Create and queue a WhatsApp broadcast campaign."""
     service = CampaignService(db)

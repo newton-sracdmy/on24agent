@@ -20,7 +20,7 @@ router = APIRouter()
 @router.get("/", response_model=APIResponse[IntegrationListResponse])
 async def list_integrations(
     user_context: AuthenticatedUserContext = Depends(require_tenant),
-    db: AsyncSession = Depends(get_db),
+    db: AsyncSession = Depends(get_db, scope="function"),
 ) -> APIResponse[IntegrationListResponse]:
     """List all available integrations, category counters, and tenant connection status."""
     res = await IntegrationsService.list_integrations(db, user_context.organization_id)
@@ -31,7 +31,7 @@ async def list_integrations(
 async def connect_integration(
     payload: ConnectIntegrationRequest,
     user_context: AuthenticatedUserContext = Depends(require_tenant),
-    db: AsyncSession = Depends(get_db),
+    db: AsyncSession = Depends(get_db, scope="function"),
 ) -> APIResponse[ConnectIntegrationResponse]:
     """Securely connect and encrypt credentials for a channel or SaaS integration."""
     try:
@@ -49,7 +49,7 @@ async def connect_integration(
 async def disconnect_integration(
     app_slug: str,
     user_context: AuthenticatedUserContext = Depends(require_tenant),
-    db: AsyncSession = Depends(get_db),
+    db: AsyncSession = Depends(get_db, scope="function"),
 ) -> APIResponse[dict]:
     """Disconnect an active channel or SaaS integration."""
     try:

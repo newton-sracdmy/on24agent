@@ -252,20 +252,10 @@ async def _process_instagram_message(account_id: str, sender_igsid: str, user_te
         )
 
         # 5. Fetch RAG Knowledge Chunks & Generate AI Answer via Google Gemini
-        q_chunks = await session.execute(
-            text(
-                """
-                SELECT dc.content_text, d.title
-                FROM document_chunks dc
-                JOIN documents d ON d.id = dc.document_id
-                WHERE dc.organization_id = :org_id
-                ORDER BY dc.created_at DESC;
-                """
-            ),
-            {"org_id": org_id},
-        )
-        chunk_rows = q_chunks.mappings().all()
-        kb_context = "\n\n".join([f"[{r['title']}]: {r['content_text']}" for r in chunk_rows])
+        from app.domains.rag.service import RAGService
+        retrieval = await RAGService.retrieve_context(session, org_id, user_text)
+        chunk_rows = retrieval.chunks
+        kb_context = retrieval.as_context()
 
         # Fetch recent conversation turns
         q_hist = await session.execute(
@@ -285,8 +275,8 @@ async def _process_instagram_message(account_id: str, sender_igsid: str, user_te
         from app.domains.agents.service import AgentService
         system_prompt = await AgentService.get_active_system_prompt(session, org_id)
 
-        from app.domains.ai.gemini_service import generate_gemini_response
-        ai_reply = await generate_gemini_response(
+        from app.domains.ai.gemini_service import generate_grounded_reply
+        ai_reply, kb_covered = await generate_grounded_reply(
             user_query=user_text,
             system_prompt=system_prompt,
             kb_context=kb_context,
@@ -311,11 +301,14 @@ async def _process_instagram_message(account_id: str, sender_igsid: str, user_te
                 ai_reply = f"Hey! 👋 Official TechVibe guidelines:\n\n{best_chunk}\n\nFeel free to ask if you need anything else!"
             else:
                 ai_reply = "Hey! 👋 Thanks for reaching out to TechVibe Members Club on Instagram. I am your 24/7 AI Specialist. How can I help you today?"
-                try:
-                    from app.domains.rag.service import RAGService
+
+        # Any customer question the knowledge base could not answer becomes a knowledge gap
+        if RAGService.should_record_gap(user_text, kb_covered, retrieval):
+            try:
+                async with session.begin_nested():
                     await RAGService.record_knowledge_gap(session, org_id, user_text, channel="instagram")
-                except Exception as e:
-                    logger.warning(f"Failed to record knowledge gap: {e}")
+            except Exception as e:
+                logger.warning(f"Failed to record knowledge gap: {e}")
 
         # 6. Dispatch AI Reply via Meta Graph API
         if typing_task:

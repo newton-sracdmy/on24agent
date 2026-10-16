@@ -4,17 +4,27 @@ from datetime import datetime
 from typing import Any, Dict, List, Optional
 from uuid import UUID
 
-from pydantic import Field
+from pydantic import Field, field_validator
 
 from app.common.schemas import BaseSchema
 from app.constants import ChunkingStrategy, DocumentSourceType, IngestionJobStatus, VectorDistanceMetric
 
 
+MAX_DOCUMENT_CHARS = 500_000
+
+
+def _strip(v: Any) -> Any:
+    return v.strip() if isinstance(v, str) else v
+
+
 class KnowledgeBaseCreate(BaseSchema):
     name: str = Field(..., min_length=2, max_length=100)
-    description: Optional[str] = None
-    embedding_model_id: UUID
+    description: Optional[str] = Field(None, max_length=255)
+    # Omit to use the platform's default embedding model
+    embedding_model_id: Optional[UUID] = None
     distance_metric: VectorDistanceMetric = VectorDistanceMetric.COSINE
+
+    _strip_name = field_validator("name", mode="before")(_strip)
 
 
 class KnowledgeBaseResponse(BaseSchema):
@@ -31,9 +41,11 @@ class KnowledgeBaseResponse(BaseSchema):
 class DocumentCreate(BaseSchema):
     title: str = Field(..., min_length=1, max_length=255)
     source_type: DocumentSourceType = DocumentSourceType.FILE_UPLOAD
-    source_uri: Optional[str] = None
-    raw_text: str = Field(..., min_length=1)
+    source_uri: Optional[str] = Field(None, max_length=1024)
+    raw_text: str = Field(..., min_length=1, max_length=MAX_DOCUMENT_CHARS)
     chunking_strategy: ChunkingStrategy = ChunkingStrategy.PARAGRAPH_AWARE
+
+    _strip_fields = field_validator("title", "raw_text", mode="before")(_strip)
 
 
 class DocumentChunkResponse(BaseSchema):
@@ -56,9 +68,12 @@ class DocumentResponse(BaseSchema):
 
 
 class SemanticSearchRequest(BaseSchema):
-    query: str = Field(..., min_length=1)
+    query: str = Field(..., min_length=1, max_length=2000)
     top_k: int = Field(5, ge=1, le=50)
-    score_threshold: Optional[float] = Field(0.7, ge=0.0, le=1.0)
+    # Cosine similarity floor; relevant hits typically score 0.55-0.8 with the default embedding model
+    score_threshold: Optional[float] = Field(None, ge=0.0, le=1.0)
+
+    _strip_query = field_validator("query", mode="before")(_strip)
 
 
 # ==============================================================================
@@ -81,15 +96,19 @@ class KnowledgeGapResponse(BaseSchema):
 
 
 class KnowledgeGapCreate(BaseSchema):
-    question: str = Field(..., min_length=2)
-    channel: Optional[str] = "whatsapp"
+    question: str = Field(..., min_length=2, max_length=1000)
+    channel: Optional[str] = Field("whatsapp", max_length=50)
     knowledge_base_id: Optional[UUID] = None
+
+    _strip_question = field_validator("question", mode="before")(_strip)
 
 
 class KnowledgeGapResolveRequest(BaseSchema):
-    answer_text: str = Field(..., min_length=5)
-    doc_title: Optional[str] = None
+    answer_text: str = Field(..., min_length=5, max_length=5000)
+    doc_title: Optional[str] = Field(None, max_length=255)
     knowledge_base_id: Optional[UUID] = None
+
+    _strip_fields = field_validator("answer_text", "doc_title", mode="before")(_strip)
 
 
 class KnowledgeGapStatusUpdate(BaseSchema):

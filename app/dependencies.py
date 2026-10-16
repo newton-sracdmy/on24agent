@@ -22,7 +22,12 @@ security_scheme = HTTPBearer(auto_error=False)
 
 
 async def get_db() -> AsyncGenerator[AsyncSession, None]:
-    """Database session dependency enforcing RLS."""
+    """Database session dependency enforcing RLS.
+
+    Always declare it as Depends(get_db, scope="function"): with the default "request" scope the
+    commit runs after the response is sent, so a client acting on the response (e.g. using a
+    token right after login) can race the commit and read uncommitted state.
+    """
     async for session in get_db_session():
         yield session
 
@@ -58,7 +63,7 @@ class AuthenticatedUserContext:
 
 async def get_current_user(
     auth_header: Annotated[Optional[HTTPAuthorizationCredentials], Security(security_scheme)],
-    db: Annotated[AsyncSession, Depends(get_db)],
+    db: Annotated[AsyncSession, Depends(get_db, scope="function")],
     x_org_header: Annotated[Optional[str], Header(alias="X-Organization-ID")] = None,
 ) -> AuthenticatedUserContext:
     """Validates the bearer token against the live session and resolves organization context.

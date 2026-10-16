@@ -23,7 +23,7 @@ router = APIRouter()
 @router.get("/balance", response_model=APIResponse[CreditBalanceResponse])
 async def get_balance(
     user_context: AuthenticatedUserContext = Depends(require_tenant),
-    db: AsyncSession = Depends(get_db),
+    db: AsyncSession = Depends(get_db, scope="function"),
 ) -> APIResponse[CreditBalanceResponse]:
     """Retrieve active organization AI operation credit balance."""
     service = CreditService(db)
@@ -35,7 +35,7 @@ async def get_balance(
 async def get_ledger(
     limit: int = Query(50, ge=1, le=100),
     user_context: AuthenticatedUserContext = Depends(require_tenant),
-    db: AsyncSession = Depends(get_db),
+    db: AsyncSession = Depends(get_db, scope="function"),
 ) -> APIResponse[List[CreditLedgerEntryResponse]]:
     """List double-entry audit history of credit grants and deductions."""
     query = (
@@ -53,7 +53,7 @@ async def get_ledger(
 async def deduct_credits(
     payload: CreditDeductionRequest,
     user_context: AuthenticatedUserContext = Depends(require_tenant),
-    db: AsyncSession = Depends(get_db),
+    db: AsyncSession = Depends(get_db, scope="function"),
 ) -> APIResponse[CreditLedgerEntryResponse]:
     """Manually or programmatically deduct credits for an AI/telephony invocation."""
     service = CreditService(db)

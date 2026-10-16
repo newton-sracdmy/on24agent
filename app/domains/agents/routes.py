@@ -9,7 +9,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.common.schemas import APIResponse
 from app.dependencies import AuthenticatedUserContext, get_db, require_tenant
-from app.domains.agents import rate_limit
+from app.common import llm_rate_limit as rate_limit
 from app.domains.agents.models import AgentConfig
 from app.domains.agents.schemas import (
     AgentConfigCreate,
@@ -36,7 +36,7 @@ router = APIRouter()
 @router.get("/instructions", response_model=APIResponse[InstructionStudioResponse])
 async def get_instruction_studio(
     user_context: AuthenticatedUserContext = Depends(require_tenant),
-    db: AsyncSession = Depends(get_db),
+    db: AsyncSession = Depends(get_db, scope="function"),
 ) -> APIResponse[InstructionStudioResponse]:
     """Retrieve the current instruction configuration, active agent, and preset templates."""
     service = AgentService(db)
@@ -69,7 +69,7 @@ async def generate_instructions(
 async def deploy_instructions(
     payload: InstructionDeployRequest,
     user_context: AuthenticatedUserContext = Depends(require_tenant),
-    db: AsyncSession = Depends(get_db),
+    db: AsyncSession = Depends(get_db, scope="function"),
 ) -> APIResponse[AgentVersionResponse]:
     """Deploy and publish instructions to live WhatsApp, Messenger, and Instagram bots."""
     service = AgentService(db)
@@ -81,7 +81,7 @@ async def deploy_instructions(
 async def test_instructions(
     payload: InstructionTestRequest,
     user_context: AuthenticatedUserContext = Depends(require_tenant),
-    db: AsyncSession = Depends(get_db),
+    db: AsyncSession = Depends(get_db, scope="function"),
 ) -> APIResponse[InstructionTestResponse]:
     """Test response generation in an isolated sandbox with RAG grounding."""
     await rate_limit.ensure_llm_call_allowed(user_context.organization_id, "test")
@@ -98,7 +98,7 @@ async def test_instructions(
 async def create_agent(
     payload: AgentConfigCreate,
     user_context: AuthenticatedUserContext = Depends(require_tenant),
-    db: AsyncSession = Depends(get_db),
+    db: AsyncSession = Depends(get_db, scope="function"),
 ) -> APIResponse[AgentConfigResponse]:
     """Create a new AI Agent profile."""
     service = AgentService(db)
@@ -109,7 +109,7 @@ async def create_agent(
 @router.get("/", response_model=APIResponse[List[AgentConfigResponse]])
 async def list_agents(
     user_context: AuthenticatedUserContext = Depends(require_tenant),
-    db: AsyncSession = Depends(get_db),
+    db: AsyncSession = Depends(get_db, scope="function"),
 ) -> APIResponse[List[AgentConfigResponse]]:
     """List all AI Agents configured for this workspace."""
     query = select(AgentConfig).where(AgentConfig.organization_id == user_context.organization_id)
@@ -123,7 +123,7 @@ async def create_version(
     agent_id: UUID,
     payload: AgentVersionCreate,
     user_context: AuthenticatedUserContext = Depends(require_tenant),
-    db: AsyncSession = Depends(get_db),
+    db: AsyncSession = Depends(get_db, scope="function"),
 ) -> APIResponse[AgentVersionResponse]:
     """Create a new immutable version snapshot for an AI Agent."""
     service = AgentService(db)
@@ -136,7 +136,7 @@ async def publish_version(
     agent_id: UUID,
     version_id: UUID,
     user_context: AuthenticatedUserContext = Depends(require_tenant),
-    db: AsyncSession = Depends(get_db),
+    db: AsyncSession = Depends(get_db, scope="function"),
 ) -> APIResponse[AgentVersionResponse]:
     """Publish an agent version to handle live customer traffic."""
     service = AgentService(db)

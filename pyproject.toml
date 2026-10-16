@@ -24,6 +24,7 @@ redis = {extras = ["hiredis"], version = "^5.1.0"}
 celery = "^5.4.0"
 flower = "^2.0.1"
 httpx = "^0.27.2"
+pypdf = "^5.1.0"
 python-jose = {extras = ["cryptography"], version = "^3.3.0"}
 passlib = {extras = ["bcrypt"], version = "^1.7.4"}
 cryptography = "^43.0.1"

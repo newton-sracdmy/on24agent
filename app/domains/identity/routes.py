@@ -31,7 +31,7 @@ router = APIRouter()
 async def register(
     payload: UserRegister,
     request: Request,
-    db: AsyncSession = Depends(get_db),
+    db: AsyncSession = Depends(get_db, scope="function"),
 ) -> APIResponse[TokenResponse]:
     """Register a new account, create initial workspace, and grant Owner credentials."""
     ip = request.client.host if request.client else None
@@ -47,7 +47,7 @@ async def register(
 async def login(
     payload: UserLogin,
     request: Request,
-    db: AsyncSession = Depends(get_db),
+    db: AsyncSession = Depends(get_db, scope="function"),
 ) -> APIResponse[TokenResponse]:
     """Authenticate with email and password."""
     ip = request.client.host if request.client else None
@@ -62,7 +62,7 @@ async def login(
 @router.post("/refresh", response_model=APIResponse[TokenResponse])
 async def refresh(
     payload: RefreshTokenRequest,
-    db: AsyncSession = Depends(get_db),
+    db: AsyncSession = Depends(get_db, scope="function"),
 ) -> APIResponse[TokenResponse]:
     """Exchange a refresh token for a new access/refresh token pair (single use)."""
     service = IdentityService(db)
@@ -73,7 +73,7 @@ async def refresh(
 @router.post("/logout", response_model=APIResponse[dict])
 async def logout(
     user_context: AuthenticatedUserContext = Depends(get_current_user),
-    db: AsyncSession = Depends(get_db),
+    db: AsyncSession = Depends(get_db, scope="function"),
 ) -> APIResponse[dict]:
     """Terminate active user session and revoke authorization."""
     service = IdentityService(db)
@@ -84,7 +84,7 @@ async def logout(
 @router.get("/me", response_model=APIResponse[dict])
 async def get_my_profile(
     user_context: AuthenticatedUserContext = Depends(get_current_user),
-    db: AsyncSession = Depends(get_db),
+    db: AsyncSession = Depends(get_db, scope="function"),
 ) -> APIResponse[dict]:
     """Fetch current user identity context and active workspace details."""
     service = IdentityService(db)
@@ -120,7 +120,7 @@ async def get_my_profile(
 async def update_presence(
     agent_status: AgentOnlineStatus,
     user_context: AuthenticatedUserContext = Depends(require_tenant),
-    db: AsyncSession = Depends(get_db),
+    db: AsyncSession = Depends(get_db, scope="function"),
 ) -> APIResponse[dict]:
     """Update agent's real-time routing availability (online, busy, away, offline)."""
     service = IdentityService(db)
@@ -133,7 +133,7 @@ async def update_presence(
 @router.get("/members", response_model=APIResponse[List[MembershipResponse]])
 async def list_members(
     user_context: AuthenticatedUserContext = Depends(require_tenant),
-    db: AsyncSession = Depends(get_db),
+    db: AsyncSession = Depends(get_db, scope="function"),
 ) -> APIResponse[List[MembershipResponse]]:
     """List all team members in the active workspace."""
     service = IdentityService(db)
