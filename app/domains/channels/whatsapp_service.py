@@ -16,6 +16,8 @@ from sqlalchemy import text
 
 from app.database import admin_session_factory
 from app.security import decrypt_secret
+from app.domains.channels.dedup import claim_inbound_message
+from app.domains.channels.typing import start_typing, stop_typing
 
 logger = logging.getLogger("whatsapp_service")
 META_GRAPH_API_VERSION = "v19.0"
@@ -53,9 +55,9 @@ async def send_whatsapp_message(
 
 
 async def mark_whatsapp_message_read(
-    access_token: str, phone_number_id: str, message_id: str
+    access_token: str, phone_number_id: str, message_id: str, show_typing: bool = False
 ) -> None:
-    """Mark an inbound WhatsApp message as read to display double-blue checkmarks."""
+    """Mark an inbound WhatsApp message as read (blue ticks), optionally showing the typing indicator."""
     url = f"https://graph.facebook.com/{META_GRAPH_API_VERSION}/{phone_number_id}/messages"
     headers = {
         "Authorization": f"Bearer {access_token}",
@@ -66,10 +68,15 @@ async def mark_whatsapp_message_read(
         "status": "read",
         "message_id": message_id,
     }
+    if show_typing:
+        # Shown until we reply or for up to 25 seconds
+        payload["typing_indicator"] = {"type": "text"}
 
     async with httpx.AsyncClient(timeout=10.0) as client:
         try:
-            await client.post(url, headers=headers, json=payload)
+            resp = await client.post(url, headers=headers, json=payload)
+            if resp.status_code not in (200, 201):
+                logger.warning(f"WhatsApp read/typing update failed ({resp.status_code}): {resp.text}")
         except Exception as e:
             logger.warning(f"Failed to mark WhatsApp message {message_id} as read: {e}")
 
@@ -118,6 +125,10 @@ async def handle_inbound_whatsapp_event(payload: Dict[str, Any]) -> None:
                     user_text = f"[{msg_type.upper()} message received]"
 
                 if not sender_wa_id or not user_text:
+                    continue
+
+                if not await claim_inbound_message("whatsapp", msg_id):
+                    logger.info(f"Skipping duplicate WhatsApp webhook delivery for message {msg_id}")
                     continue
 
                 logger.info(
@@ -177,9 +188,12 @@ async def _process_whatsapp_message(
         # Set RLS Context
         await session.execute(text(f"SELECT set_config('app.current_org_id', '{org_id}', true);"))
 
-        # Mark message as read on WhatsApp
+        # Mark message as read and show "typing…" while the reply is prepared
+        typing_task = None
         if msg_id and access_token:
-            await mark_whatsapp_message_read(access_token, phone_number_id, msg_id)
+            typing_task = start_typing(
+                lambda: mark_whatsapp_message_read(access_token, phone_number_id, msg_id, show_typing=True)
+            )
 
         # 2. Find or Create Contact by WhatsApp Phone Number (wa_id)
         q_contact = await session.execute(
@@ -346,6 +360,8 @@ async def _process_whatsapp_message(
                     logger.warning(f"Failed to record knowledge gap: {e}")
 
         # 6. Dispatch Outbound AI Reply via Meta WhatsApp Cloud API
+        if typing_task:
+            await stop_typing(typing_task)
         if access_token and phone_number_id:
             sent = await send_whatsapp_message(access_token, phone_number_id, sender_wa_id, ai_reply)
         else:

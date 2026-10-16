@@ -16,9 +16,34 @@ from sqlalchemy import text
 
 from app.database import admin_session_factory
 from app.security import decrypt_secret
+from app.domains.channels.typing import start_typing, stop_typing
 
 logger = logging.getLogger("instagram_messaging")
 META_GRAPH_API_VERSION = "v19.0"
+
+
+def _instagram_messages_url(access_token: str, sender_account_id: Optional[str] = None) -> str:
+    # Instagram Login tokens (IGAA…/IGQ…) use graph.instagram.com; Page tokens use graph.facebook.com
+    if access_token.startswith("IGAA") or access_token.startswith("IGQ"):
+        return f"https://graph.instagram.com/{META_GRAPH_API_VERSION}/me/messages"
+    return f"https://graph.facebook.com/{META_GRAPH_API_VERSION}/{sender_account_id or 'me'}/messages"
+
+
+async def send_instagram_sender_action(
+    access_token: str, recipient_igsid: str, action: str, sender_account_id: Optional[str] = None
+) -> None:
+    """Send an Instagram sender action: 'mark_seen', 'typing_on' or 'typing_off'."""
+    url = _instagram_messages_url(access_token, sender_account_id)
+    params = {"access_token": access_token}
+    payload = {"recipient": {"id": recipient_igsid}, "sender_action": action}
+
+    async with httpx.AsyncClient(timeout=10.0) as client:
+        try:
+            resp = await client.post(url, params=params, json=payload)
+            if resp.status_code != 200:
+                logger.warning(f"Instagram sender_action '{action}' failed ({resp.status_code}): {resp.text}")
+        except Exception as e:
+            logger.warning(f"Exception sending Instagram sender_action '{action}': {e}")
 
 
 async def send_instagram_message(
@@ -28,11 +53,7 @@ async def send_instagram_message(
     sender_account_id: Optional[str] = None,
 ) -> bool:
     """Send an outbound text message to an Instagram user via Meta Graph API."""
-    if access_token.startswith("IGAA") or access_token.startswith("IGQ"):
-        url = f"https://graph.instagram.com/{META_GRAPH_API_VERSION}/me/messages"
-    else:
-        target_id = sender_account_id or "me"
-        url = f"https://graph.facebook.com/{META_GRAPH_API_VERSION}/{target_id}/messages"
+    url = _instagram_messages_url(access_token, sender_account_id)
     params = {"access_token": access_token}
     payload = {
         "recipient": {"id": recipient_igsid},
@@ -126,6 +147,14 @@ async def _process_instagram_message(account_id: str, sender_igsid: str, user_te
 
         if not access_token:
             logger.error(f"No access_token stored for Instagram channel account {ch_row['id']}")
+
+        # Show "seen" + "typing…" to the customer while the reply is prepared
+        typing_task = None
+        if access_token:
+            await send_instagram_sender_action(access_token, sender_igsid, "mark_seen", account_id)
+            typing_task = start_typing(
+                lambda: send_instagram_sender_action(access_token, sender_igsid, "typing_on", account_id)
+            )
 
         # Set RLS Context
         await session.execute(text(f"SELECT set_config('app.current_org_id', '{org_id}', true);"))
@@ -289,6 +318,8 @@ async def _process_instagram_message(account_id: str, sender_igsid: str, user_te
                     logger.warning(f"Failed to record knowledge gap: {e}")
 
         # 6. Dispatch AI Reply via Meta Graph API
+        if typing_task:
+            await stop_typing(typing_task)
         sent = False
         if access_token:
             sent = await send_instagram_message(access_token, sender_igsid, ai_reply, sender_account_id=account_id)

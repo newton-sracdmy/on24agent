@@ -17,6 +17,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.database import admin_session_factory
 from app.security import decrypt_secret
+from app.domains.channels.typing import start_typing, stop_typing
 
 logger = logging.getLogger("facebook_messenger")
 META_GRAPH_API_VERSION = "v19.0"
@@ -44,6 +45,21 @@ async def send_facebook_message(page_access_token: str, recipient_psid: str, tex
         except Exception as e:
             logger.error(f"Exception sending Facebook message: {e}")
             return False
+
+
+async def send_facebook_sender_action(page_access_token: str, recipient_psid: str, action: str) -> None:
+    """Send a Messenger sender action: 'mark_seen', 'typing_on' or 'typing_off'."""
+    url = f"https://graph.facebook.com/{META_GRAPH_API_VERSION}/me/messages"
+    params = {"access_token": page_access_token}
+    payload = {"recipient": {"id": recipient_psid}, "sender_action": action}
+
+    async with httpx.AsyncClient(timeout=10.0) as client:
+        try:
+            resp = await client.post(url, params=params, json=payload)
+            if resp.status_code != 200:
+                logger.warning(f"Messenger sender_action '{action}' failed ({resp.status_code}): {resp.text}")
+        except Exception as e:
+            logger.warning(f"Exception sending Messenger sender_action '{action}': {e}")
 
 
 async def handle_inbound_facebook_event(payload: Dict[str, Any]) -> None:
@@ -96,6 +112,12 @@ async def _process_facebook_message(page_id: str, sender_psid: str, user_text: s
         page_access_token = creds.get("page_access_token") or creds.get("api_key_or_token") or ""
         if not page_access_token:
             logger.error(f"No page_access_token stored for Facebook channel account {ch_row['id']}")
+
+        # Show "seen" + "typing…" to the customer while the reply is prepared
+        typing_task = None
+        if page_access_token:
+            await send_facebook_sender_action(page_access_token, sender_psid, "mark_seen")
+            typing_task = start_typing(lambda: send_facebook_sender_action(page_access_token, sender_psid, "typing_on"))
 
         # Set RLS Context
         await session.execute(text(f"SELECT set_config('app.current_org_id', '{org_id}', true);"))
@@ -266,6 +288,8 @@ async def _process_facebook_message(page_id: str, sender_psid: str, user_text: s
                     logger.warning(f"Failed to record knowledge gap: {e}")
 
         # 6. Dispatch AI Reply via Meta Graph API
+        if typing_task:
+            await stop_typing(typing_task)
         if page_access_token:
             sent = await send_facebook_message(page_access_token, sender_psid, ai_reply)
         else:
