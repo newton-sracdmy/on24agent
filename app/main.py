@@ -7,10 +7,12 @@ from pathlib import Path
 from contextlib import asynccontextmanager
 from typing import AsyncGenerator
 
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
+from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.middleware.gzip import GZipMiddleware
-from fastapi.responses import FileResponse
+from fastapi.responses import FileResponse, JSONResponse
+from starlette.exceptions import HTTPException as StarletteHTTPException
 from fastapi.staticfiles import StaticFiles
 from prometheus_fastapi_instrumentator import Instrumentator
 
@@ -67,6 +69,31 @@ def create_application() -> FastAPI:
     async def openapi_alias():
         from fastapi.responses import RedirectResponse
         return RedirectResponse(url=f"{settings.API_V1_STR}/openapi.json")
+
+    # Return framework errors in the same APIResponse envelope as GabsterException,
+    # so clients can always read error.message
+    @app.exception_handler(RequestValidationError)
+    async def validation_error_handler(request: Request, exc: RequestValidationError) -> JSONResponse:
+        errors = exc.errors()
+        first = errors[0] if errors else {}
+        field = ".".join(str(p) for p in first.get("loc", []) if p not in ("body", "query", "path"))
+        message = f"{field}: {first.get('msg')}" if field else str(first.get("msg", "Invalid request"))
+        payload = APIResponse.fail(
+            code="VALIDATION_ERROR",
+            message=message,
+            details={"errors": [{"loc": e.get("loc"), "msg": e.get("msg")} for e in errors]},
+            request_id=getattr(request.state, "request_id", None),
+        ).model_dump(by_alias=True)
+        return JSONResponse(status_code=422, content=payload)
+
+    @app.exception_handler(StarletteHTTPException)
+    async def http_error_handler(request: Request, exc: StarletteHTTPException) -> JSONResponse:
+        payload = APIResponse.fail(
+            code=f"HTTP_{exc.status_code}",
+            message=str(exc.detail),
+            request_id=getattr(request.state, "request_id", None),
+        ).model_dump(by_alias=True)
+        return JSONResponse(status_code=exc.status_code, content=payload, headers=getattr(exc, "headers", None))
 
     # Core Middlewares (Executed in reverse order of addition)
     app.add_middleware(GlobalExceptionMiddleware)

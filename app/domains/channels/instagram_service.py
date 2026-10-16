@@ -15,7 +15,8 @@ import httpx
 from sqlalchemy import text
 
 from app.database import admin_session_factory
-from app.security import decrypt_secret
+from app.domains.channels import inbound
+from app.domains.channels.dedup import claim_inbound_message
 from app.domains.channels.typing import start_typing, stop_typing
 
 logger = logging.getLogger("instagram_messaging")
@@ -76,7 +77,7 @@ async def send_instagram_message(
 
 async def handle_inbound_instagram_event(payload: Dict[str, Any]) -> None:
     """Process an incoming webhook payload from Meta Instagram Messaging."""
-    logger.info(f"Incoming Instagram webhook payload: {json.dumps(payload)}")
+    logger.debug(f"Incoming Instagram webhook payload: {json.dumps(payload)}")
     if payload.get("object") not in ("instagram", "page"):
         return
 
@@ -97,75 +98,40 @@ async def handle_inbound_instagram_event(payload: Dict[str, Any]) -> None:
             if not user_text:
                 continue
 
-            logger.info(f"Received Instagram message from IGSID {sender_id} to Account {account_id}: '{user_text}'")
+            # Meta retries deliveries; process each message ID once
+            if not await claim_inbound_message("instagram", message_obj.get("mid")):
+                logger.info(f"Skipping duplicate Instagram webhook delivery for message {message_obj.get('mid')}")
+                continue
 
-            await _process_instagram_message(account_id, sender_id, user_text)
+            logger.info(f"Received Instagram message from IGSID {sender_id} to Account {account_id}")
+
+            await _process_instagram_message(account_id, sender_id, user_text, message_obj.get("mid"))
 
 
-async def _process_instagram_message(account_id: str, sender_igsid: str, user_text: str) -> None:
+async def _process_instagram_message(
+    account_id: str, sender_igsid: str, user_text: str, mid: Optional[str] = None
+) -> None:
     async with admin_session_factory() as session:
-        # 1. Find Channel Account by account_identifier or channel type 'instagram'
-        q_channel = await session.execute(
-            text(
-                """
-                SELECT ca.id, ca.organization_id, ca.encrypted_credentials 
-                FROM channel_accounts ca
-                JOIN channels ch ON ch.id = ca.channel_id
-                WHERE (ca.account_identifier = :acc_id OR ch.type = 'instagram')
-                  AND ca.is_deleted = false 
-                LIMIT 1;
-                """
-            ),
-            {"acc_id": account_id},
-        )
-        ch_row = q_channel.mappings().first()
+        # 1. Route to the organization that owns this Instagram account
+        ch_row = await inbound.find_channel_account(session, "instagram", account_id)
         if not ch_row:
             logger.warning(f"No active channel account found for Instagram Account ID {account_id}")
             return
 
         channel_account_id = ch_row["id"]
         org_id = ch_row["organization_id"]
-
-        if account_id and ch_row.get("account_identifier") == "instagram_default":
-            await session.execute(
-                text("UPDATE channel_accounts SET account_identifier = :acc_id WHERE id = :id;"),
-                {"acc_id": account_id, "id": channel_account_id},
-            )
-            await session.commit()
-
-        # Decrypt Access Token
-        creds_json = decrypt_secret(ch_row["encrypted_credentials"]) if ch_row["encrypted_credentials"] else ""
-        access_token = ""
-        if creds_json:
-            try:
-                creds_dict = json.loads(creds_json)
-                access_token = (
-                    creds_dict.get("access_token") or creds_dict.get("page_access_token") or creds_dict.get("api_key_or_token") or ""
-                )
-            except Exception:
-                pass
-
+        creds = inbound.load_credentials(ch_row["encrypted_credentials"])
+        access_token = creds.get("access_token") or creds.get("page_access_token") or creds.get("api_key_or_token") or ""
         if not access_token:
-            logger.error(f"No access_token stored for Instagram channel account {ch_row['id']}")
-
-        # Show "seen" + "typing…" to the customer while the reply is prepared
-        typing_task = None
-        if access_token:
-            await send_instagram_sender_action(access_token, sender_igsid, "mark_seen", account_id)
-            typing_task = start_typing(
-                lambda: send_instagram_sender_action(access_token, sender_igsid, "typing_on", account_id)
-            )
-
-        # Set RLS Context
-        await session.execute(text(f"SELECT set_config('app.current_org_id', '{org_id}', true);"))
+            logger.error(f"No access_token stored for Instagram channel account {channel_account_id}")
 
         # 2. Find or Create Contact by IGSID
         q_contact = await session.execute(
             text(
                 """
-                SELECT id FROM contacts 
-                WHERE organization_id = :org_id 
-                  AND custom_attributes->>'igsid' = :igsid 
+                SELECT id FROM contacts
+                WHERE organization_id = :org_id
+                  AND custom_attributes->>'igsid' = :igsid
                 LIMIT 1;
                 """
             ),
@@ -192,163 +158,36 @@ async def _process_instagram_message(account_id: str, sender_igsid: str, user_te
             )
             contact_id = q_ins_contact.scalar_one()
 
-        # 3. Find or Create Conversation
-        q_conv = await session.execute(
-            text(
-                """
-                SELECT id FROM conversations 
-                WHERE organization_id = :org_id 
-                  AND contact_id = :cid 
-                  AND channel_account_id = :chid 
-                  AND status <> 'closed' 
-                ORDER BY created_at DESC LIMIT 1;
-                """
-            ),
-            {"org_id": org_id, "cid": contact_id, "chid": channel_account_id},
+        # 3. Thread the message and make it visible in the inbox right away
+        conversation_id = await inbound.upsert_conversation(
+            session, org_id, contact_id, channel_account_id, f"Instagram DM ({user_text[:40]}...)"
         )
-        conv_row = q_conv.mappings().first()
-
-        if conv_row:
-            conversation_id = conv_row["id"]
-            await session.execute(
-                text(
-                    """
-                    UPDATE conversations 
-                    SET last_message_at = CURRENT_TIMESTAMP, 
-                        service_window_expires_at = CURRENT_TIMESTAMP + INTERVAL '24 hours',
-                        unread_count = unread_count + 1 
-                    WHERE id = :id;
-                    """
-                ),
-                {"id": conversation_id},
-            )
-        else:
-            q_ins_conv = await session.execute(
-                text(
-                    """
-                    INSERT INTO conversations (id, organization_id, contact_id, channel_account_id, status, priority, subject, service_window_expires_at, unread_count, created_at, updated_at)
-                    VALUES (gen_random_uuid(), :org_id, :cid, :chid, 'open', 'medium', :subject, CURRENT_TIMESTAMP + INTERVAL '24 hours', 1, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
-                    RETURNING id;
-                    """
-                ),
-                {
-                    "org_id": org_id,
-                    "cid": contact_id,
-                    "chid": channel_account_id,
-                    "subject": f"Instagram DM ({user_text[:40]}...)",
-                },
-            )
-            conversation_id = q_ins_conv.scalar_one()
-
-        # 4. Save Inbound Customer Message
-        await session.execute(
-            text(
-                """
-                INSERT INTO messages (id, organization_id, conversation_id, sender_type, content_type, text_content, delivery_status, created_at, updated_at)
-                VALUES (gen_random_uuid(), :org_id, :conv_id, 'contact', 'text', :content, 'delivered', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP);
-                """
-            ),
-            {"org_id": org_id, "conv_id": conversation_id, "content": user_text},
-        )
-
-        # 5. Fetch RAG Knowledge Chunks & Generate AI Answer via Google Gemini
-        from app.domains.rag.service import RAGService
-        retrieval = await RAGService.retrieve_context(session, org_id, user_text)
-        chunk_rows = retrieval.chunks
-        kb_context = retrieval.as_context()
-
-        # Fetch recent conversation turns
-        q_hist = await session.execute(
-            text(
-                """
-                SELECT sender_type, text_content
-                FROM messages
-                WHERE conversation_id = :conv_id
-                ORDER BY created_at ASC
-                LIMIT 6;
-                """
-            ),
-            {"conv_id": conversation_id},
-        )
-        chat_hist = [dict(r) for r in q_hist.mappings().all()]
-
-        from app.domains.agents.service import AgentService
-        system_prompt = await AgentService.get_active_system_prompt(session, org_id)
-
-        from app.domains.ai.gemini_service import generate_grounded_reply
-        ai_reply, kb_covered = await generate_grounded_reply(
-            user_query=user_text,
-            system_prompt=system_prompt,
-            kb_context=kb_context,
-            chat_history=chat_hist,
-        )
-
-        # Fallback heuristic RAG matcher if Gemini is unavailable
-        if not ai_reply:
-            lower_q = user_text.lower()
-            q_words = [w.strip() for w in lower_q.replace("?", "").replace(",", "").replace(".", "").replace("!", "").split() if len(w.strip()) > 1]
-            best_chunk = None
-            best_score = 0
-            for row in chunk_rows:
-                chunk_text = row["content_text"]
-                chunk_lower = chunk_text.lower()
-                matched = sum(1 for w in q_words if w in chunk_lower)
-                if matched > best_score:
-                    best_score = matched
-                    best_chunk = chunk_text
-
-            if best_chunk and best_score >= 1:
-                ai_reply = f"Hey! 👋 Official TechVibe guidelines:\n\n{best_chunk}\n\nFeel free to ask if you need anything else!"
-            else:
-                ai_reply = "Hey! 👋 Thanks for reaching out to TechVibe Members Club on Instagram. I am your 24/7 AI Specialist. How can I help you today?"
-
-        # Any customer question the knowledge base could not answer becomes a knowledge gap
-        if RAGService.should_record_gap(user_text, kb_covered, retrieval):
-            try:
-                async with session.begin_nested():
-                    await RAGService.record_knowledge_gap(session, org_id, user_text, channel="instagram")
-            except Exception as e:
-                logger.warning(f"Failed to record knowledge gap: {e}")
-
-        # 6. Dispatch AI Reply via Meta Graph API
-        if typing_task:
-            await stop_typing(typing_task)
-        sent = False
-        if access_token:
-            sent = await send_instagram_message(access_token, sender_igsid, ai_reply, sender_account_id=account_id)
-
-        # 7. Save Outbound Bot Message in Database
-        await session.execute(
-            text(
-                """
-                INSERT INTO messages (id, organization_id, conversation_id, sender_type, content_type, text_content, delivery_status, created_at, updated_at)
-                VALUES (gen_random_uuid(), :org_id, :conv_id, 'bot', 'text', :content, :status, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP);
-                """
-            ),
-            {"org_id": org_id, "conv_id": conversation_id, "content": ai_reply, "status": "delivered" if sent else "sent"},
-        )
-
-        # 8. Record in Double-entry Credit Ledger
-        await session.execute(
-            text(
-                """
-                UPDATE credit_balances 
-                SET balance_credits = balance_credits - 1.0, 
-                    lifetime_consumed_credits = lifetime_consumed_credits + 1.0 
-                WHERE organization_id = :org_id;
-                """
-            ),
-            {"org_id": org_id},
-        )
-        await session.execute(
-            text(
-                """
-                INSERT INTO credit_ledger (id, organization_id, transaction_type, amount, balance_after, description, created_at, updated_at)
-                VALUES (gen_random_uuid(), :org_id, 'usage_deduction', -1.0, (SELECT balance_credits FROM credit_balances WHERE organization_id = :org_id), 'Instagram AI Turn Inference', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP);
-                """
-            ),
-            {"org_id": org_id},
-        )
-
+        await inbound.save_message(session, org_id, conversation_id, "contact", user_text, "delivered", mid)
         await session.commit()
-        logger.info(f"Processed Instagram interaction for TechVibe. AI reply sent to {sender_igsid}: '{ai_reply}'")
+
+        # 4. A human agent owns the conversation: leave it to them
+        if not await inbound.bot_should_reply(session, conversation_id):
+            logger.info(f"Bot paused for Instagram conversation {conversation_id}: human agent is handling it")
+            return
+
+        typing_task = None
+        if access_token:
+            await send_instagram_sender_action(access_token, sender_igsid, "mark_seen", account_id)
+            typing_task = start_typing(
+                lambda: send_instagram_sender_action(access_token, sender_igsid, "typing_on", account_id)
+            )
+        try:
+            ai_reply, used_ai = await inbound.generate_bot_reply(session, org_id, conversation_id, user_text, "instagram")
+        finally:
+            if typing_task:
+                await stop_typing(typing_task)
+
+        # 5. Send, record and bill the reply
+        sent = bool(access_token) and await send_instagram_message(
+            access_token, sender_igsid, ai_reply, sender_account_id=account_id
+        )
+        await inbound.save_message(session, org_id, conversation_id, "bot", ai_reply, "delivered" if sent else "failed")
+        if used_ai:
+            await inbound.charge_ai_turn(session, org_id, "Instagram AI Turn Inference")
+        await session.commit()
+        logger.info(f"Processed Instagram message for org {org_id} (conversation {conversation_id}, sent={sent})")

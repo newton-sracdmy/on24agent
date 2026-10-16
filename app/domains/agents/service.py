@@ -8,7 +8,7 @@ from typing import Any, Dict, List, Optional
 from uuid import UUID
 
 import httpx
-from sqlalchemy import select
+from sqlalchemy import select, text
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.config import settings
@@ -321,9 +321,16 @@ Language: {payload.language.strip()} (Reply in the language the customer writes 
         except Exception as e:
             logger.warning(f"Failed to query active system prompt for org {org_id}: {e}")
 
-        # Fallback default prompt
+        # No agent deployed yet: a neutral prompt in the organization's own name
+        org_name = "our company"
+        try:
+            name = (await session.execute(text("SELECT name FROM organizations WHERE id = :id"), {"id": org_id})).scalar()
+            if name:
+                org_name = name
+        except Exception as e:
+            logger.warning(f"Failed to load organization name for {org_id}: {e}")
         return (
-            "You are the official 24/7 AI Customer Operations Specialist for TechVibe Members Club. "
+            f"You are the official 24/7 AI customer support assistant for {org_name}. "
             "Assist customers politely, concisely, and helpfully. "
             "Always ground your responses in verified knowledge base facts."
         )

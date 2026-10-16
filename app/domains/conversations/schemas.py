@@ -4,7 +4,7 @@ from datetime import datetime
 from typing import Any, Dict, List, Optional
 from uuid import UUID
 
-from pydantic import Field
+from pydantic import Field, field_validator, model_validator
 
 from app.common.schemas import BaseSchema
 from app.constants import (
@@ -17,11 +17,26 @@ from app.constants import (
 )
 
 
+# WhatsApp's limit for a text message body; Messenger/Instagram allow less, enforced by Meta
+MAX_MESSAGE_LENGTH = 4096
+
+
 class MessageCreate(BaseSchema):
-    text_content: Optional[str] = None
+    text_content: Optional[str] = Field(None, max_length=MAX_MESSAGE_LENGTH)
     content_type: MessageContentType = MessageContentType.TEXT
     payload_json: Dict[str, Any] = Field(default_factory=dict)
     reply_to_message_id: Optional[UUID] = None
+
+    @field_validator("text_content", mode="before")
+    @classmethod
+    def _strip_text(cls, v: Any) -> Any:
+        return v.strip() if isinstance(v, str) else v
+
+    @model_validator(mode="after")
+    def _text_required(self) -> "MessageCreate":
+        if self.content_type == MessageContentType.TEXT and not self.text_content:
+            raise ValueError("text_content is required for text messages")
+        return self
 
 
 class MessageAttachmentResponse(BaseSchema):
@@ -52,7 +67,7 @@ class MessageResponse(BaseSchema):
 class ConversationCreate(BaseSchema):
     contact_id: UUID
     channel_account_id: UUID
-    subject: Optional[str] = None
+    subject: Optional[str] = Field(None, max_length=255)
     priority: ConversationPriority = ConversationPriority.MEDIUM
 
 
@@ -81,6 +96,9 @@ class ConversationResponse(BaseSchema):
     last_message_at: datetime
     unread_count: int
     created_at: datetime
+    # Denormalized for inbox rendering
+    contact_name: Optional[str] = None
+    channel_type: Optional[str] = None
 
 
 class CannedResponseCreate(BaseSchema):

@@ -15,7 +15,7 @@ import httpx
 from sqlalchemy import text
 
 from app.database import admin_session_factory
-from app.security import decrypt_secret
+from app.domains.channels import inbound
 from app.domains.channels.dedup import claim_inbound_message
 from app.domains.channels.typing import start_typing, stop_typing
 
@@ -152,55 +152,25 @@ async def _process_whatsapp_message(
     msg_id: Optional[str] = None,
 ) -> None:
     async with admin_session_factory() as session:
-        # 1. Find Channel Account by phone_number_id
-        q_channel = await session.execute(
-            text(
-                """
-                SELECT id, organization_id, encrypted_credentials 
-                FROM channel_accounts 
-                WHERE account_identifier = :phone_number_id AND is_deleted = false 
-                LIMIT 1;
-                """
-            ),
-            {"phone_number_id": phone_number_id},
-        )
-        ch_row = q_channel.mappings().first()
+        # 1. Route to the organization that owns this WhatsApp number
+        ch_row = await inbound.find_channel_account(session, "whatsapp", phone_number_id)
         if not ch_row:
             logger.warning(f"No active channel account found for WhatsApp Phone Number ID {phone_number_id}")
             return
 
         channel_account_id = ch_row["id"]
         org_id = ch_row["organization_id"]
-
-        # Decrypt Access Token
-        creds_json = decrypt_secret(ch_row["encrypted_credentials"])
-        access_token = ""
-        if creds_json:
-            try:
-                creds_dict = json.loads(creds_json)
-                access_token = creds_dict.get("access_token") or creds_dict.get("api_key_or_token") or ""
-            except Exception:
-                pass
-
+        creds = inbound.load_credentials(ch_row["encrypted_credentials"])
+        access_token = creds.get("access_token") or creds.get("api_key_or_token") or ""
         if not access_token:
-            logger.error(f"No access_token stored for WhatsApp channel account {ch_row['id']}")
-
-        # Set RLS Context
-        await session.execute(text(f"SELECT set_config('app.current_org_id', '{org_id}', true);"))
-
-        # Mark message as read and show "typing…" while the reply is prepared
-        typing_task = None
-        if msg_id and access_token:
-            typing_task = start_typing(
-                lambda: mark_whatsapp_message_read(access_token, phone_number_id, msg_id, show_typing=True)
-            )
+            logger.error(f"No access_token stored for WhatsApp channel account {channel_account_id}")
 
         # 2. Find or Create Contact by WhatsApp Phone Number (wa_id)
         q_contact = await session.execute(
             text(
                 """
-                SELECT id FROM contacts 
-                WHERE organization_id = :org_id 
+                SELECT id FROM contacts
+                WHERE organization_id = :org_id
                   AND (phone_number = :wa_phone OR custom_attributes->>'wa_id' = :wa_id)
                 LIMIT 1;
                 """
@@ -209,13 +179,10 @@ async def _process_whatsapp_message(
         )
         contact_row = q_contact.mappings().first()
 
-        name_parts = sender_name.split(" ", 1)
-        first_name = name_parts[0]
-        last_name = name_parts[1] if len(name_parts) > 1 else ""
-
         if contact_row:
             contact_id = contact_row["id"]
         else:
+            name_parts = sender_name.split(" ", 1)
             q_ins_contact = await session.execute(
                 text(
                     """
@@ -226,172 +193,41 @@ async def _process_whatsapp_message(
                 ),
                 {
                     "org_id": org_id,
-                    "first_name": first_name,
-                    "last_name": last_name,
+                    "first_name": name_parts[0][:100],
+                    "last_name": (name_parts[1] if len(name_parts) > 1 else "")[:100],
                     "phone": f"+{sender_wa_id}",
                     "attrs": json.dumps({"wa_id": sender_wa_id, "source": "whatsapp_cloud_api"}),
                 },
             )
             contact_id = q_ins_contact.scalar_one()
 
-        # 3. Find or Create Conversation
-        q_conv = await session.execute(
-            text(
-                """
-                SELECT id FROM conversations 
-                WHERE organization_id = :org_id 
-                  AND contact_id = :cid 
-                  AND channel_account_id = :chid 
-                  AND status <> 'closed' 
-                ORDER BY created_at DESC LIMIT 1;
-                """
-            ),
-            {"org_id": org_id, "cid": contact_id, "chid": channel_account_id},
+        # 3. Thread the message and make it visible in the inbox right away
+        conversation_id = await inbound.upsert_conversation(
+            session, org_id, contact_id, channel_account_id, f"WhatsApp: {sender_name} (+{sender_wa_id})"
         )
-        conv_row = q_conv.mappings().first()
-
-        if conv_row:
-            conversation_id = conv_row["id"]
-            await session.execute(
-                text(
-                    """
-                    UPDATE conversations 
-                    SET last_message_at = CURRENT_TIMESTAMP, 
-                        service_window_expires_at = CURRENT_TIMESTAMP + INTERVAL '24 hours',
-                        unread_count = unread_count + 1 
-                    WHERE id = :id;
-                    """
-                ),
-                {"id": conversation_id},
-            )
-        else:
-            q_ins_conv = await session.execute(
-                text(
-                    """
-                    INSERT INTO conversations (id, organization_id, contact_id, channel_account_id, status, priority, subject, service_window_expires_at, unread_count, created_at, updated_at)
-                    VALUES (gen_random_uuid(), :org_id, :cid, :chid, 'open', 'medium', :subject, CURRENT_TIMESTAMP + INTERVAL '24 hours', 1, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
-                    RETURNING id;
-                    """
-                ),
-                {
-                    "org_id": org_id,
-                    "cid": contact_id,
-                    "chid": channel_account_id,
-                    "subject": f"WhatsApp: {sender_name} (+{sender_wa_id})",
-                },
-            )
-            conversation_id = q_ins_conv.scalar_one()
-
-        # 4. Save Inbound Customer Message
-        await session.execute(
-            text(
-                """
-                INSERT INTO messages (id, organization_id, conversation_id, sender_type, content_type, text_content, delivery_status, created_at, updated_at)
-                VALUES (gen_random_uuid(), :org_id, :conv_id, 'contact', 'text', :content, 'delivered', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP);
-                """
-            ),
-            {"org_id": org_id, "conv_id": conversation_id, "content": user_text},
-        )
-
-        # 5. Fetch RAG Knowledge Chunks & Generate AI Answer via Google Gemini
-        from app.domains.rag.service import RAGService
-        retrieval = await RAGService.retrieve_context(session, org_id, user_text)
-        chunk_rows = retrieval.chunks
-        kb_context = retrieval.as_context()
-
-        # Fetch recent conversation turns
-        q_hist = await session.execute(
-            text(
-                """
-                SELECT sender_type, text_content
-                FROM messages
-                WHERE conversation_id = :conv_id
-                ORDER BY created_at ASC
-                LIMIT 6;
-                """
-            ),
-            {"conv_id": conversation_id},
-        )
-        chat_hist = [dict(r) for r in q_hist.mappings().all()]
-
-        from app.domains.agents.service import AgentService
-        system_prompt = await AgentService.get_active_system_prompt(session, org_id)
-
-        from app.domains.ai.gemini_service import generate_grounded_reply
-        ai_reply, kb_covered = await generate_grounded_reply(
-            user_query=user_text,
-            system_prompt=system_prompt,
-            kb_context=kb_context,
-            chat_history=chat_hist,
-        )
-
-        # Fallback to extractive heuristic RAG matcher if Gemini is unavailable
-        if not ai_reply:
-            lower_q = user_text.lower()
-            q_words = [w.strip() for w in lower_q.replace("?", "").replace(",", "").replace(".", "").replace("!", "").split() if len(w.strip()) > 1]
-            best_chunk = None
-            best_score = 0
-            for row in chunk_rows:
-                chunk_text = row["content_text"]
-                chunk_lower = chunk_text.lower()
-                matched = sum(1 for w in q_words if w in chunk_lower)
-                if matched > best_score:
-                    best_score = matched
-                    best_chunk = chunk_text
-
-            if best_chunk and best_score >= 1:
-                ai_reply = f"According to TechVibe official guidelines:\n\n{best_chunk}\n\nLet us know if you need more details!"
-            else:
-                ai_reply = f"Hello {sender_name}! 👋 Thanks for messaging TechVibe Members Club. I am your 24/7 AI Operations Specialist. How can I assist your tech journey today?"
-
-        # Any customer question the knowledge base could not answer becomes a knowledge gap
-        if RAGService.should_record_gap(user_text, kb_covered, retrieval):
-            try:
-                async with session.begin_nested():
-                    await RAGService.record_knowledge_gap(session, org_id, user_text, channel="whatsapp")
-            except Exception as e:
-                logger.warning(f"Failed to record knowledge gap: {e}")
-
-        # 6. Dispatch Outbound AI Reply via Meta WhatsApp Cloud API
-        if typing_task:
-            await stop_typing(typing_task)
-        if access_token and phone_number_id:
-            sent = await send_whatsapp_message(access_token, phone_number_id, sender_wa_id, ai_reply)
-        else:
-            sent = False
-
-        # 7. Save Outbound Bot Message in Database
-        await session.execute(
-            text(
-                """
-                INSERT INTO messages (id, organization_id, conversation_id, sender_type, content_type, text_content, delivery_status, created_at, updated_at)
-                VALUES (gen_random_uuid(), :org_id, :conv_id, 'bot', 'text', :content, :status, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP);
-                """
-            ),
-            {"org_id": org_id, "conv_id": conversation_id, "content": ai_reply, "status": "delivered" if sent else "sent"},
-        )
-
-        # 8. Record in Double-entry Credit Ledger
-        await session.execute(
-            text(
-                """
-                UPDATE credit_balances 
-                SET balance_credits = balance_credits - 1.0, 
-                    lifetime_consumed_credits = lifetime_consumed_credits + 1.0 
-                WHERE organization_id = :org_id;
-                """
-            ),
-            {"org_id": org_id},
-        )
-        await session.execute(
-            text(
-                """
-                INSERT INTO credit_ledger (id, organization_id, transaction_type, amount, balance_after, description, created_at, updated_at)
-                VALUES (gen_random_uuid(), :org_id, 'usage_deduction', -1.0, (SELECT balance_credits FROM credit_balances WHERE organization_id = :org_id), 'WhatsApp AI Turn Inference', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP);
-                """
-            ),
-            {"org_id": org_id},
-        )
-
+        await inbound.save_message(session, org_id, conversation_id, "contact", user_text, "delivered", msg_id)
         await session.commit()
-        logger.info(f"Processed WhatsApp interaction for TechVibe. AI reply sent: '{ai_reply}'")
+
+        # 4. A human agent owns the conversation: leave it to them
+        if not await inbound.bot_should_reply(session, conversation_id):
+            logger.info(f"Bot paused for WhatsApp conversation {conversation_id}: human agent is handling it")
+            return
+
+        typing_task = None
+        if msg_id and access_token:
+            typing_task = start_typing(
+                lambda: mark_whatsapp_message_read(access_token, phone_number_id, msg_id, show_typing=True)
+            )
+        try:
+            ai_reply, used_ai = await inbound.generate_bot_reply(session, org_id, conversation_id, user_text, "whatsapp")
+        finally:
+            if typing_task:
+                await stop_typing(typing_task)
+
+        # 5. Send, record and bill the reply
+        sent = bool(access_token) and await send_whatsapp_message(access_token, phone_number_id, sender_wa_id, ai_reply)
+        await inbound.save_message(session, org_id, conversation_id, "bot", ai_reply, "delivered" if sent else "failed")
+        if used_ai:
+            await inbound.charge_ai_turn(session, org_id, "WhatsApp AI Turn Inference")
+        await session.commit()
+        logger.info(f"Processed WhatsApp message for org {org_id} (conversation {conversation_id}, sent={sent})")

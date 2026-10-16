@@ -8,6 +8,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.common.pagination import PaginationParams
 from app.common.schemas import APIResponse, PaginatedResponse
+from app.exceptions import ResourceNotFoundError
 from app.dependencies import AuthenticatedUserContext, get_db, require_tenant
 from app.domains.contacts.schemas import (
     ContactCreate,
@@ -62,7 +63,7 @@ async def get_contact(
     service = ContactService(db)
     contact = await service.contact_repo.get_by_id(contact_id, organization_id=user_context.organization_id)
     if not contact:
-        return APIResponse.fail(code="CONTACT_NOT_FOUND", message="Contact profile not found")
+        raise ResourceNotFoundError("Contact", contact_id)
     return APIResponse.ok(data=ContactResponse.model_validate(contact))
 
 

@@ -78,7 +78,7 @@
             <i data-lucide="message-square" class="w-4 h-4"></i>
             <span>Unified Inbox</span>
           </div>
-          <span class="text-[11px] px-2 py-0.5 rounded-full bg-emerald-600 text-white font-bold" id="badgeUnread">3</span>
+          <span class="text-[11px] px-2 py-0.5 rounded-full bg-emerald-600 text-white font-bold hidden" id="badgeUnread">0</span>
         </button>
 
         <button onclick="switchTab('contacts')" id="nav-contacts" class="w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-sm font-medium text-slate-600 hover:text-slate-900 hover:bg-slate-100 transition">
@@ -146,42 +146,13 @@
               <h2 class="text-sm font-bold text-slate-900 tracking-wide">Live Conversations</h2>
               <p class="text-xs text-slate-500">All channels real-time feed</p>
             </div>
-            <button onclick="quickSeedDemoData()" class="px-2.5 py-1 text-[11px] font-semibold rounded bg-emerald-50 text-emerald-700 hover:bg-emerald-100 border border-emerald-200 transition">
-              + Seed Demo
+            <button onclick="fetchLiveConversations()" class="px-2.5 py-1 text-[11px] font-semibold rounded bg-emerald-50 text-emerald-700 hover:bg-emerald-100 border border-emerald-200 transition">
+              Refresh
             </button>
           </div>
 
           <div class="flex-1 overflow-y-auto scrollbar-thin p-2 space-y-1.5" id="conversationList">
-            <!-- Dynamic Item Placeholder -->
-            <div onclick="selectConv('1')" class="p-3 rounded-xl bg-emerald-50/70 border border-emerald-200 cursor-pointer hover:bg-emerald-50 transition shadow-xs">
-              <div class="flex items-center justify-between mb-1">
-                <div class="flex items-center gap-2">
-                  <span class="text-xs font-bold text-slate-900">Tariq Al-Mansoor</span>
-                  <span class="text-[10px] px-1.5 py-0.2 rounded bg-emerald-50 text-emerald-700 border border-emerald-200 font-semibold">WhatsApp</span>
-                </div>
-                <span class="text-[10px] text-slate-400">2m ago</span>
-              </div>
-              <p class="text-xs text-slate-600 truncate">Hello! I want to inquire about custom enterprise billing for voice agents.</p>
-              <div class="flex items-center justify-between mt-2 text-[10px]">
-                <span class="text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200 font-medium">SLA: 12m left</span>
-                <span class="text-amber-600 font-medium">Waiting for Agent</span>
-              </div>
-            </div>
-
-            <div onclick="selectConv('2')" class="p-3 rounded-xl bg-white border border-slate-200 cursor-pointer hover:bg-slate-50 transition shadow-xs">
-              <div class="flex items-center justify-between mb-1">
-                <div class="flex items-center gap-2">
-                  <span class="text-xs font-bold text-slate-900">Fatima Zahra</span>
-                  <span class="text-[10px] px-1.5 py-0.2 rounded bg-sky-50 text-sky-700 border border-sky-200 font-semibold">Web Chat</span>
-                </div>
-                <span class="text-[10px] text-slate-400">14m ago</span>
-              </div>
-              <p class="text-xs text-slate-600 truncate">Can the bot automatically answer Arabic Riyadh dialect questions?</p>
-              <div class="flex items-center justify-between mt-2 text-[10px]">
-                <span class="text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200 font-medium">SLA: OK</span>
-                <span class="text-slate-500">AI Handled</span>
-              </div>
-            </div>
+            <p class="p-6 text-center text-xs text-slate-400 italic">Loading conversations...</p>
           </div>
         </div>
 
@@ -190,21 +161,19 @@
           <!-- Chat Header -->
           <div class="h-16 border-b border-slate-200 px-6 flex items-center justify-between shrink-0 bg-white shadow-xs">
             <div class="flex items-center gap-3">
-              <div class="w-10 h-10 rounded-full bg-emerald-50 border border-emerald-200 flex items-center justify-center font-bold text-emerald-700">
-                TA
+              <div id="chatAvatar" class="w-10 h-10 rounded-full bg-emerald-50 border border-emerald-200 flex items-center justify-center font-bold text-emerald-700">
+                —
               </div>
               <div>
-                <h3 class="text-sm font-bold text-slate-900" id="chatContactName">Tariq Al-Mansoor</h3>
-                <p class="text-xs text-slate-500 flex items-center gap-2">
-                  <span>+966 50 123 4567</span> • <span class="text-emerald-600 font-medium">WhatsApp 24h Window Active (23h 48m left)</span>
-                </p>
+                <h3 class="text-sm font-bold text-slate-900" id="chatContactName">No conversation selected</h3>
+                <p class="text-xs text-slate-500 flex flex-wrap items-center gap-x-2" id="chatContactMeta"></p>
               </div>
             </div>
             <div class="flex items-center gap-2">
-              <button onclick="aiGenerateReply()" class="px-3 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs flex items-center gap-1.5 shadow-xs transition">
-                <i data-lucide="sparkles" class="w-4 h-4"></i> AI Copilot Reply
+              <button onclick="aiGenerateReply()" class="whitespace-nowrap px-3 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs flex items-center gap-1.5 shadow-xs transition">
+                <i data-lucide="sparkles" class="w-4 h-4"></i> <span id="btnAiCopilotLabel">AI Draft Reply</span>
               </button>
-              <button onclick="resolveCurrentChat()" class="px-3 py-1.5 rounded-lg bg-white hover:bg-slate-50 border border-slate-200 text-xs font-semibold text-slate-700 shadow-xs transition">
+              <button onclick="resolveCurrentChat()" id="btnResolveChat" class="whitespace-nowrap px-3 py-1.5 rounded-lg bg-white hover:bg-slate-50 border border-slate-200 text-xs font-semibold text-slate-700 shadow-xs transition">
                 Resolve & Trigger CSAT
               </button>
             </div>
@@ -212,41 +181,13 @@
 
           <!-- Message History -->
           <div class="flex-1 overflow-y-auto scrollbar-thin p-6 space-y-4 bg-slate-50/50" id="messageStream">
-            <!-- Inbound Contact Message -->
-            <div class="flex gap-3 max-w-lg">
-              <div class="w-7 h-7 rounded-full bg-slate-200 text-slate-700 flex items-center justify-center text-xs font-bold shrink-0">TA</div>
-              <div>
-                <div class="p-3.5 rounded-2xl rounded-tl-none bg-white text-sm text-slate-800 leading-relaxed border border-slate-200 shadow-xs">
-                  Hello! I want to inquire about custom enterprise billing for voice agents with Arabic Riyadh dialect support. What are your volume pricing tiers?
-                </div>
-                <span class="text-[10px] text-slate-400 mt-1 block">10:42 AM • Delivered</span>
-              </div>
-            </div>
-
-            <!-- Outbound AI Bot / Agent Message -->
-            <div class="flex gap-3 max-w-lg ml-auto justify-end">
-              <div>
-                <div class="p-3.5 rounded-2xl rounded-tr-none bg-emerald-600 text-sm text-white leading-relaxed shadow-sm">
-                  Marhaban Tariq! 👋 Gabster AI fully supports localized Gulf and Saudi dialects (Najdi/Hejazi) with sub-second voice agent latency. Our Enterprise plans feature credit pooling with dedicated throughput guarantees. Would you like me to share our product sheet?
-                </div>
-                <div class="flex items-center justify-end gap-1.5 text-[10px] text-slate-400 mt-1">
-                  <span>AI Copilot (Grounded in RAG)</span> • <i data-lucide="check-check" class="w-3 h-3 text-emerald-500"></i>
-                </div>
-              </div>
-              <div class="w-7 h-7 rounded-full bg-emerald-500 text-white flex items-center justify-center text-xs font-bold shrink-0">AI</div>
-            </div>
+            <p class="text-center text-xs text-slate-400 italic pt-10">Select a conversation to view messages.</p>
           </div>
 
           <!-- Composer Box -->
           <div class="p-4 border-t border-slate-200 bg-white">
-            <div class="flex items-center gap-2 mb-2">
-              <span class="text-[11px] text-slate-500 font-medium">Quick Canned Replies:</span>
-              <button onclick="insertCanned('pricing')" class="text-[11px] px-2 py-0.5 rounded bg-slate-100 text-slate-700 hover:bg-slate-200 border border-slate-200 font-medium">/pricing</button>
-              <button onclick="insertCanned('schedule_demo')" class="text-[11px] px-2 py-0.5 rounded bg-slate-100 text-slate-700 hover:bg-slate-200 border border-slate-200 font-medium">/schedule_demo</button>
-              <button onclick="insertCanned('sla_info')" class="text-[11px] px-2 py-0.5 rounded bg-slate-100 text-slate-700 hover:bg-slate-200 border border-slate-200 font-medium">/sla_info</button>
-            </div>
             <div class="flex items-center gap-3">
-              <input type="text" id="chatInput" onkeydown="if(event.key === 'Enter') sendMessage()" placeholder="Type a message or '/' for canned response..." class="flex-1 bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-sm text-slate-900 placeholder-slate-400 focus:outline-none focus:bg-white focus:border-emerald-500 transition">
+              <input type="text" id="chatInput" onkeydown="if(event.key === 'Enter') sendMessage()" placeholder="Type a reply..." class="flex-1 bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-sm text-slate-900 placeholder-slate-400 focus:outline-none focus:bg-white focus:border-emerald-500 transition">
               <button onclick="sendMessage()" class="px-5 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 font-bold text-white text-sm flex items-center gap-1.5 transition shadow-xs">
                 <span>Send</span>
                 <i data-lucide="send" class="w-4 h-4"></i>
@@ -259,35 +200,8 @@
         <div class="w-72 border-l border-slate-200 bg-white p-5 flex flex-col gap-5 overflow-y-auto shrink-0">
           <div>
             <h4 class="text-xs font-bold text-slate-500 uppercase tracking-wider mb-3">Customer Profile</h4>
-            <div class="space-y-2 text-xs">
-              <div class="flex justify-between py-1 border-b border-slate-100">
-                <span class="text-slate-500">Lifecycle Stage</span>
-                <span class="text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200 font-semibold uppercase">Sales Qualified</span>
-              </div>
-              <div class="flex justify-between py-1 border-b border-slate-100">
-                <span class="text-slate-500">Country / Locale</span>
-                <span class="text-slate-800 font-medium">Saudi Arabia (ar-SA)</span>
-              </div>
-              <div class="flex justify-between py-1 border-b border-slate-100">
-                <span class="text-slate-500">Total Chats</span>
-                <span class="text-slate-800 font-medium">4 conversations</span>
-              </div>
-            </div>
-          </div>
-
-          <div>
-            <h4 class="text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">CRM Tags</h4>
-            <div class="flex flex-wrap gap-1.5">
-              <span class="text-[10px] px-2 py-0.5 rounded bg-emerald-50 text-emerald-700 border border-emerald-200 font-medium">Enterprise VIP</span>
-              <span class="text-[10px] px-2 py-0.5 rounded bg-indigo-50 text-indigo-700 border border-indigo-200 font-medium">Voice Telephony</span>
-              <span class="text-[10px] px-2 py-0.5 rounded bg-amber-50 text-amber-700 border border-amber-200 font-medium">Riyadh Hub</span>
-            </div>
-          </div>
-
-          <div>
-            <h4 class="text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Internal Agent Notes</h4>
-            <div class="p-3 rounded-lg bg-slate-50 border border-slate-200 text-xs text-slate-700">
-              Client wants 50 concurrent telephony streams with sub-second latency SLA. High intent.
+            <div class="space-y-2 text-xs" id="crmProfile">
+              <p class="text-slate-400 italic">Select a conversation to see the customer.</p>
             </div>
           </div>
         </div>
@@ -405,7 +319,7 @@
             </div>
             <div id="builder-active-badge" class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[11px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200">
               <span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
-              <span id="builder-badge-text">Live Bot: Active</span>
+              <span id="builder-badge-text">Live Bot: Not deployed yet</span>
             </div>
           </div>
 
@@ -561,7 +475,7 @@
                 <div class="flex items-center justify-between text-[11px] text-slate-500 px-1">
                   <div>Words: <span id="builder-word-count" class="text-slate-900 font-bold">0</span></div>
                   <div>Est. Tokens: <span id="builder-token-count" class="text-emerald-600 font-bold">0</span></div>
-                  <div>Target: <span class="text-purple-600 font-semibold">Gemini 1.5 Pro</span></div>
+                  <div>Target: <span class="text-purple-600 font-semibold">Google Gemini</span></div>
                 </div>
 
                 <div class="relative">
@@ -633,7 +547,7 @@
               </div>
               <div>
                 <h3 class="text-sm font-bold text-slate-900">AI Auto-Draft Instruction Set</h3>
-                <p class="text-[11px] text-slate-500">Powered by Google Gemini 1.5</p>
+                <p class="text-[11px] text-slate-500">Powered by Google Gemini</p>
               </div>
             </div>
             <button onclick="closeAiDraftModal()" class="text-slate-400 hover:text-slate-700 transition">
@@ -815,7 +729,7 @@
                 <i data-lucide="upload-cloud" class="w-8 h-8 text-emerald-600 mx-auto mb-2"></i>
                 <p class="text-xs text-slate-900 font-medium" id="ragFileNameDisplay">Click to browse or drag & drop PDF, TXT, MD or CSV file</p>
                 <p class="text-[10px] text-slate-500 mt-1">Supported formats: PDF documents, Markdown (.md), Plain Text (.txt)</p>
-                <input type="file" id="ragFileInput" class="hidden" accept=".pdf,.txt,.md,.csv,.json" onchange="handleFileSelected(event)">
+                <input type="file" id="ragFileInput" class="hidden" accept=".pdf,.txt,.md,.csv" onchange="handleFileSelected(event)">
               </div>
               <button onclick="submitRAGFile()" id="btnSubmitFile" class="w-full py-2.5 bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs rounded-xl transition flex items-center justify-center gap-1.5 shadow-xs">
                 <span>Upload, Chunk & Index in pgvector</span>
@@ -1802,10 +1716,10 @@
           const tbody = document.getElementById('contactsTableBody');
           tbody.innerHTML = contactsCache.map(c => `
             <tr class="hover:bg-slate-50">
-              <td class="p-4 font-bold text-slate-900">${c.first_name || ''} ${c.last_name || ''}</td>
-              <td class="p-4 text-slate-600">${c.phone_number || c.email || 'N/A'}</td>
-              <td class="p-4"><span class="px-2 py-0.5 rounded bg-emerald-50 text-emerald-700 border border-emerald-200 font-semibold capitalize">${c.lifecycle_stage}</span></td>
-              <td class="p-4"><span class="px-2 py-0.5 rounded bg-slate-100 text-slate-700 border border-slate-200 font-medium">${c.custom_attributes?.tier || c.custom_attributes?.region || 'Standard'}</span></td>
+              <td class="p-4 font-bold text-slate-900">${escapeHtml(`${c.first_name || ''} ${c.last_name || ''}`)}</td>
+              <td class="p-4 text-slate-600">${escapeHtml(c.phone_number || c.email || 'N/A')}</td>
+              <td class="p-4"><span class="px-2 py-0.5 rounded bg-emerald-50 text-emerald-700 border border-emerald-200 font-semibold capitalize">${escapeHtml(c.lifecycle_stage)}</span></td>
+              <td class="p-4"><span class="px-2 py-0.5 rounded bg-slate-100 text-slate-700 border border-slate-200 font-medium">${escapeHtml(c.custom_attributes?.tier || c.custom_attributes?.region || 'Standard')}</span></td>
               <td class="p-4 text-slate-500">Active</td>
             </tr>
           `).join('');
@@ -1815,53 +1729,140 @@
       }
     }
 
-    let lastMessageCount = 0;
+    let lastMessageSignature = '';
+
+    const CHANNEL_BADGES = {
+      whatsapp: ['WhatsApp', 'bg-emerald-50 text-emerald-700 border border-emerald-200'],
+      messenger: ['Messenger', 'bg-blue-50 text-blue-700 border border-blue-200'],
+      instagram: ['Instagram', 'bg-pink-50 text-pink-700 border border-pink-200'],
+      webchat: ['Web Chat', 'bg-sky-50 text-sky-700 border border-sky-200'],
+    };
+
+    function convDisplayName(c) {
+      return c.contact_name || c.subject || `Thread #${c.id.substring(0, 8)}`;
+    }
+
+    function initials(name) {
+      return (name || '?').split(/\s+/).filter(Boolean).slice(0, 2).map(w => w[0]).join('').toUpperCase() || '?';
+    }
+
+    function windowLabel(c) {
+      if (c.channel_type !== 'whatsapp') return '';
+      if (!c.service_window_expires_at) return '<span class="text-amber-600 font-medium">24h reply window closed (template required)</span>';
+      const ms = new Date(c.service_window_expires_at) - Date.now();
+      if (ms <= 0) return '<span class="text-amber-600 font-medium">24h reply window closed (template required)</span>';
+      const h = Math.floor(ms / 3600000), m = Math.floor((ms % 3600000) / 60000);
+      return `<span class="text-emerald-600 font-medium whitespace-nowrap">24h reply window open (${h}h ${m}m left)</span>`;
+    }
+
+    function relativeTime(iso) {
+      const s = Math.max(0, (Date.now() - new Date(iso)) / 1000);
+      if (s < 60) return 'just now';
+      if (s < 3600) return `${Math.floor(s / 60)}m ago`;
+      if (s < 86400) return `${Math.floor(s / 3600)}h ago`;
+      return new Date(iso).toLocaleDateString([], { month: 'short', day: 'numeric' });
+    }
+
+    function renderEmptyChat(message) {
+      document.getElementById('chatContactName').textContent = 'No conversation selected';
+      document.getElementById('chatContactMeta').innerHTML = '';
+      document.getElementById('chatAvatar').textContent = '—';
+      document.getElementById('messageStream').innerHTML =
+        `<p class="text-center text-xs text-slate-400 italic pt-10">${escapeHtml(message)}</p>`;
+      document.getElementById('crmProfile').innerHTML =
+        '<p class="text-slate-400 italic">Select a conversation to see the customer.</p>';
+    }
 
     async function fetchLiveConversations(isBackground = false) {
       if (!authToken) return;
       try {
-        const res = await fetch('/api/v1/conversations/', {
+        const res = await fetch('/api/v1/conversations/?page_size=50', {
           headers: { 'Authorization': `Bearer ${authToken}` }
         });
         const json = await res.json();
-        if (json.success && json.data && json.data.items && json.data.items.length > 0) {
-          conversationsCache = json.data.items;
-          const list = document.getElementById('conversationList');
-          list.innerHTML = conversationsCache.map((c, i) => {
-            const isSelected = activeConvId ? c.id === activeConvId : i === 0;
-            let channelBadge = 'Web Chat';
-            let badgeColor = 'bg-sky-50 text-sky-700 border border-sky-200';
-            const subLower = (c.subject || '').toLowerCase();
-            if (subLower.includes('whatsapp') || c.channel_account_id?.includes('11') || c.channel_account_id?.includes('10')) {
-              channelBadge = 'WhatsApp';
-              badgeColor = 'bg-emerald-50 text-emerald-700 border border-emerald-200';
-            } else if (subLower.includes('messenger') || c.channel_account_id?.includes('210')) {
-              channelBadge = 'Messenger';
-              badgeColor = 'bg-blue-50 text-blue-700 border border-blue-200';
-            }
-            const contactName = c.subject || `Thread #${c.id.substring(0, 8)}`;
-            return `
-              <div onclick="selectConversation('${c.id}')" id="conv-item-${c.id}" class="p-3 rounded-xl ${isSelected ? 'bg-emerald-50/70 border border-emerald-200 shadow-xs' : 'bg-white border border-slate-200 hover:bg-slate-50'} cursor-pointer transition">
-                <div class="flex items-center justify-between mb-1">
-                  <div class="flex items-center gap-2">
-                    <span class="text-xs font-bold text-slate-900 truncate max-w-[140px]">${contactName}</span>
-                    <span class="text-[10px] px-1.5 py-0.2 rounded ${badgeColor} font-semibold">${channelBadge}</span>
-                  </div>
-                  <span class="text-[10px] text-slate-400">Live</span>
-                </div>
-                <p class="text-xs text-slate-600 truncate">${c.subject || 'Conversation thread'}</p>
-                <div class="flex items-center justify-between mt-2 text-[10px]">
-                  <span class="text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200 font-medium">Priority: ${c.priority}</span>
-                  <span class="text-amber-600 font-medium capitalize">${c.status.replace('_', ' ')}</span>
-                </div>
-              </div>
-            `;
-          }).join('');
+        if (!json.success || !json.data) return;
+        conversationsCache = json.data.items || [];
+        const list = document.getElementById('conversationList');
 
-          if (!activeConvId && conversationsCache.length > 0 && !isBackground) {
-            selectConversation(conversationsCache[0].id);
-          }
+        if (conversationsCache.length === 0) {
+          list.innerHTML = `<p class="p-6 text-center text-xs text-slate-400 italic">No conversations yet. Messages from your connected WhatsApp, Messenger and Instagram accounts will appear here.</p>`;
+          activeConvId = null;
+          renderEmptyChat('No conversations yet.');
+          return;
         }
+
+        const totalUnread = conversationsCache.reduce((n, c) => n + (c.id === activeConvId ? 0 : c.unread_count || 0), 0);
+        const badge = document.getElementById('badgeUnread');
+        if (badge) {
+          badge.textContent = totalUnread;
+          badge.classList.toggle('hidden', totalUnread === 0);
+        }
+
+        list.innerHTML = conversationsCache.map(c => {
+          const isSelected = c.id === activeConvId;
+          const [channelBadge, badgeColor] = CHANNEL_BADGES[c.channel_type] || [c.channel_type || 'Channel', 'bg-slate-100 text-slate-700 border border-slate-200'];
+          const unread = c.unread_count > 0 && !isSelected
+            ? `<span class="min-w-[18px] h-[18px] px-1 rounded-full bg-emerald-600 text-white text-[10px] font-bold flex items-center justify-center">${c.unread_count}</span>`
+            : `<span class="text-[10px] text-slate-400">${relativeTime(c.last_message_at)}</span>`;
+          return `
+            <div onclick="selectConversation('${c.id}')" id="conv-item-${c.id}" class="p-3 rounded-xl ${isSelected ? 'bg-emerald-50/70 border border-emerald-200 shadow-xs' : 'bg-white border border-slate-200 hover:bg-slate-50'} cursor-pointer transition">
+              <div class="flex items-center justify-between mb-1">
+                <div class="flex items-center gap-2 min-w-0">
+                  <span class="text-xs font-bold text-slate-900 truncate max-w-[140px]">${escapeHtml(convDisplayName(c))}</span>
+                  <span class="text-[10px] px-1.5 py-0.2 rounded ${badgeColor} font-semibold shrink-0">${escapeHtml(channelBadge)}</span>
+                </div>
+                ${unread}
+              </div>
+              <p class="text-xs text-slate-600 truncate">${escapeHtml(c.subject || 'Conversation thread')}</p>
+              <div class="flex items-center justify-between mt-2 text-[10px]">
+                <span class="text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200 font-medium capitalize">Priority: ${escapeHtml(c.priority)}</span>
+                <span class="text-amber-600 font-medium capitalize">${escapeHtml(c.status.replace(/_/g, ' '))}</span>
+              </div>
+            </div>
+          `;
+        }).join('');
+
+        if (!activeConvId && !isBackground) {
+          selectConversation(conversationsCache[0].id);
+        } else if (activeConvId) {
+          const conv = conversationsCache.find(c => c.id === activeConvId);
+          if (conv) renderChatHeader(conv);
+        }
+      } catch (e) {
+        console.error(e);
+      }
+    }
+
+    function renderChatHeader(conv) {
+      const name = convDisplayName(conv);
+      document.getElementById('chatContactName').textContent = name;
+      document.getElementById('chatAvatar').textContent = initials(conv.contact_name || name);
+      const [channelBadge] = CHANNEL_BADGES[conv.channel_type] || [conv.channel_type || ''];
+      const parts = [escapeHtml(channelBadge), windowLabel(conv)].filter(Boolean);
+      if (conv.status === 'resolved') parts.push('<span class="text-slate-500 font-medium">Resolved</span>');
+      document.getElementById('chatContactMeta').innerHTML = parts.join(' • ');
+    }
+
+    async function renderCrmProfile(conv) {
+      const box = document.getElementById('crmProfile');
+      try {
+        const res = await fetch(`/api/v1/contacts/${conv.contact_id}`, { headers: { 'Authorization': `Bearer ${authToken}` } });
+        const json = await res.json();
+        if (!json.success || conv.id !== activeConvId) return;
+        const c = json.data;
+        const row = (label, value) => value ? `
+          <div class="flex justify-between gap-3 py-1 border-b border-slate-100">
+            <span class="text-slate-500 shrink-0">${label}</span>
+            <span class="text-slate-800 font-medium text-right break-all">${escapeHtml(value)}</span>
+          </div>` : '';
+        box.innerHTML = [
+          row('Name', [c.first_name, c.last_name].filter(Boolean).join(' ')),
+          row('Phone', c.phone_number),
+          row('Email', c.email),
+          row('Lifecycle Stage', c.lifecycle_stage),
+          row('Channel', (CHANNEL_BADGES[conv.channel_type] || [conv.channel_type])[0]),
+          row('Customer since', new Date(c.created_at).toLocaleDateString()),
+        ].join('') || '<p class="text-slate-400 italic">No profile details.</p>';
       } catch (e) {
         console.error(e);
       }
@@ -1869,65 +1870,78 @@
 
     async function selectConversation(convId) {
       activeConvId = convId;
-      lastMessageCount = 0;
+      lastMessageSignature = '';
+      const conv = conversationsCache.find(c => c.id === convId);
+      if (conv) {
+        renderChatHeader(conv);
+        renderCrmProfile(conv);
+        document.querySelectorAll('[id^="conv-item-"]').forEach(el => {
+          const selected = el.id === `conv-item-${convId}`;
+          el.className = `p-3 rounded-xl ${selected ? 'bg-emerald-50/70 border border-emerald-200 shadow-xs' : 'bg-white border border-slate-200 hover:bg-slate-50'} cursor-pointer transition`;
+        });
+      }
       await fetchLiveMessages(convId, true);
+      if (conv && conv.unread_count > 0) {
+        fetch(`/api/v1/conversations/${convId}/read`, { method: 'POST', headers: { 'Authorization': `Bearer ${authToken}` } })
+          .then(() => { conv.unread_count = 0; });
+      }
     }
 
     async function fetchLiveMessages(convId, forceScroll = false) {
       if (!authToken || !convId) return;
       try {
-        const conv = conversationsCache.find(c => c.id === convId);
-        if (conv) {
-          document.getElementById('chatContactName').textContent = conv.subject || `Thread #${conv.id.substring(0,8)}`;
-        }
         const res = await fetch(`/api/v1/conversations/${convId}/messages`, {
           headers: { 'Authorization': `Bearer ${authToken}` }
         });
         const json = await res.json();
-        if (json.success && json.data) {
-          if (json.data.length === lastMessageCount && !forceScroll) return;
-          lastMessageCount = json.data.length;
+        if (!json.success || !json.data || convId !== activeConvId) return;
 
-          const stream = document.getElementById('messageStream');
-          stream.innerHTML = json.data.map(m => {
-            const isContact = m.sender_type === 'contact';
-            if (isContact) {
-              return `
-                <div class="flex gap-3 max-w-lg">
-                  <div class="w-7 h-7 rounded-full bg-slate-200 text-slate-700 flex items-center justify-center text-xs font-bold shrink-0">C</div>
-                  <div>
-                    <div class="p-3.5 rounded-2xl rounded-tl-none bg-white text-sm text-slate-800 leading-relaxed border border-slate-200 shadow-xs">
-                      ${m.text_content || ''}
-                    </div>
-                    <div class="flex items-center gap-2 text-[10px] text-slate-400 mt-1">
-                      <span>Customer</span> • <span>${new Date(m.created_at).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</span>
-                    </div>
-                  </div>
-                </div>
-              `;
-            } else {
-              const isAi = m.sender_type === 'bot';
-              return `
-                <div class="flex gap-3 max-w-lg ml-auto justify-end">
-                  <div>
-                    <div class="p-3.5 rounded-2xl rounded-tr-none ${isAi ? 'bg-emerald-600 text-white shadow-sm' : 'bg-slate-800 text-white shadow-sm'} text-sm leading-relaxed">
-                      ${isAi ? '<span class="text-[10px] uppercase font-bold text-emerald-200 block mb-1">⚡ AI Agent:</span>' : ''}
-                      ${m.text_content || ''}
-                    </div>
-                    <div class="flex items-center justify-end gap-1.5 text-[10px] text-slate-400 mt-1">
-                      <span>${isAi ? 'TechVibe AI Specialist' : 'Human Agent'}</span> • <i data-lucide="check" class="w-3 h-3 text-emerald-500"></i>
-                    </div>
-                  </div>
-                  <div class="w-7 h-7 rounded-full ${isAi ? 'bg-emerald-500 text-white' : 'bg-slate-700 text-white'} flex items-center justify-center text-xs font-bold shrink-0">
-                    ${isAi ? 'AI' : 'OP'}
-                  </div>
-                </div>
-              `;
-            }
-          }).join('');
-          stream.scrollTop = stream.scrollHeight;
-          lucide.createIcons();
+        // The API returns a sliding window of the newest messages, so compare content, not count
+        const signature = json.data.map(m => `${m.id}:${m.delivery_status}`).join('|');
+        if (signature === lastMessageSignature && !forceScroll) return;
+        lastMessageSignature = signature;
+
+        const stream = document.getElementById('messageStream');
+        if (json.data.length === 0) {
+          stream.innerHTML = '<p class="text-center text-xs text-slate-400 italic pt-10">No messages in this conversation yet.</p>';
+          return;
         }
+        stream.innerHTML = json.data.map(m => {
+          const time = new Date(m.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+          if (m.sender_type === 'contact') {
+            return `
+              <div class="flex gap-3 max-w-lg">
+                <div class="w-7 h-7 rounded-full bg-slate-200 text-slate-700 flex items-center justify-center text-xs font-bold shrink-0">C</div>
+                <div>
+                  <div class="p-3.5 rounded-2xl rounded-tl-none bg-white text-sm text-slate-800 leading-relaxed border border-slate-200 shadow-xs whitespace-pre-line">${escapeHtml(m.text_content || '')}</div>
+                  <div class="flex items-center gap-2 text-[10px] text-slate-400 mt-1">
+                    <span>Customer</span> • <span>${time}</span>
+                  </div>
+                </div>
+              </div>
+            `;
+          }
+          const isAi = m.sender_type === 'bot' || m.sender_type === 'ai_bot';
+          const failed = m.delivery_status === 'failed';
+          const statusHtml = failed
+            ? `<span class="text-rose-600 font-semibold" title="${escapeHtml(m.payload_json?.delivery_error || '')}">⚠ Not delivered${m.payload_json?.delivery_error ? ': ' + escapeHtml(m.payload_json.delivery_error) : ''}</span>`
+            : `<i data-lucide="${m.delivery_status === 'delivered' || m.delivery_status === 'read' ? 'check-check' : 'check'}" class="w-3 h-3 text-emerald-500"></i>`;
+          return `
+            <div class="flex gap-3 max-w-lg ml-auto justify-end">
+              <div>
+                <div class="p-3.5 rounded-2xl rounded-tr-none ${failed ? 'bg-rose-50 text-rose-900 border border-rose-200' : isAi ? 'bg-emerald-600 text-white shadow-sm' : 'bg-slate-800 text-white shadow-sm'} text-sm leading-relaxed whitespace-pre-line">${isAi ? `<span class="text-[10px] uppercase font-bold ${failed ? 'text-rose-500' : 'text-emerald-200'} block mb-1">⚡ AI Agent:</span>` : ''}${escapeHtml(m.text_content || '')}</div>
+                <div class="flex items-center justify-end gap-1.5 text-[10px] text-slate-400 mt-1">
+                  <span>${isAi ? 'AI Agent' : 'Human Agent'}</span> • <span>${time}</span> • ${statusHtml}
+                </div>
+              </div>
+              <div class="w-7 h-7 rounded-full ${isAi ? 'bg-emerald-500 text-white' : 'bg-slate-700 text-white'} flex items-center justify-center text-xs font-bold shrink-0">
+                ${isAi ? 'AI' : 'OP'}
+              </div>
+            </div>
+          `;
+        }).join('');
+        stream.scrollTop = stream.scrollHeight;
+        lucide.createIcons();
       } catch (e) {
         console.error(e);
       }
@@ -1962,105 +1976,76 @@
       }
     }
 
-    function insertCanned(type) {
-      const input = document.getElementById('chatInput');
-      if (type === 'pricing') {
-        input.value = "Our pricing starts at $39/mo for Solo, $149/mo for Standard, and $529/mo for Business with custom AI credits.";
-      } else if (type === 'schedule_demo') {
-        input.value = "We would love to schedule a live demo of our Arabic Voice Agents. What time works best for you tomorrow?";
-      } else if (type === 'sla_info') {
-        input.value = "All Enterprise tickets are backed by a 15-minute first response guarantee and 99.95% uptime SLA.";
-      }
-    }
-
     async function sendMessage() {
       const input = document.getElementById('chatInput');
       const text = input.value.trim();
-      if (!text) return;
+      if (!text || !authToken || !activeConvId) return;
 
-      const stream = document.getElementById('messageStream');
-      const msgHtml = `
-        <div class="flex gap-3 max-w-lg ml-auto justify-end">
-          <div>
-            <div class="p-3.5 rounded-2xl rounded-tr-none bg-emerald-600 text-sm text-white leading-relaxed">
-              ${text}
-            </div>
-            <div class="flex items-center justify-end gap-1.5 text-[10px] text-slate-400 mt-1">
-              <span>Agent</span> • <i data-lucide="check" class="w-3 h-3 text-emerald-400"></i>
-            </div>
-          </div>
-          <div class="w-7 h-7 rounded-full bg-slate-800 text-white flex items-center justify-center text-xs font-bold shrink-0">OP</div>
-        </div>
-      `;
-      stream.insertAdjacentHTML('beforeend', msgHtml);
-      input.value = '';
-      stream.scrollTop = stream.scrollHeight;
-      lucide.createIcons();
-
-      if (authToken && activeConvId) {
-        try {
-          await fetch(`/api/v1/conversations/${activeConvId}/messages`, {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-              'Authorization': `Bearer ${authToken}`
-            },
-            body: JSON.stringify({
-              text_content: text,
-              content_type: 'text'
-            })
-          });
-        } catch (e) {
-          console.error("Message sync error:", e);
+      input.disabled = true;
+      try {
+        const res = await fetch(`/api/v1/conversations/${activeConvId}/messages`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${authToken}` },
+          body: JSON.stringify({ text_content: text, content_type: 'text' })
+        });
+        const json = await res.json();
+        if (!json.success) {
+          alert("Message not sent: " + (json.error?.message || 'Server error'));
+          return;
         }
+        input.value = '';
+        await fetchLiveMessages(activeConvId, true);
+        await fetchLiveConversations(true);
+      } catch (e) {
+        alert("Network error: " + e.message);
+      } finally {
+        input.disabled = false;
+        input.focus();
       }
     }
 
     async function aiGenerateReply() {
-      const stream = document.getElementById('messageStream');
-      const msgHtml = `
-        <div class="flex gap-3 max-w-lg ml-auto justify-end">
-          <div>
-            <div class="p-3.5 rounded-2xl rounded-tr-none bg-emerald-700 text-sm text-white leading-relaxed border border-emerald-500/40">
-              <span class="text-[10px] uppercase font-bold text-emerald-300 block mb-1">⚡ Generated by AI Copilot (pgvector RAG):</span>
-              According to Acme Global shipping policy: Orders dispatched via Express Courier take 1-2 business days with SMS alerts. International shipments arrive in 3-5 days via DHL.
-            </div>
-            <div class="flex items-center justify-end gap-1.5 text-[10px] text-slate-400 mt-1">
-              <span>AI Copilot (RAG Grounded)</span> • <i data-lucide="sparkles" class="w-3 h-3 text-emerald-400"></i>
-            </div>
-          </div>
-          <div class="w-7 h-7 rounded-full bg-emerald-500 text-slate-950 flex items-center justify-center text-xs font-bold shrink-0">AI</div>
-        </div>
-      `;
-      stream.insertAdjacentHTML('beforeend', msgHtml);
-      stream.scrollTop = stream.scrollHeight;
-      lucide.createIcons();
-
-      if (authToken && activeConvId) {
-        try {
-          await fetch(`/api/v1/conversations/${activeConvId}/messages`, {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-              'Authorization': `Bearer ${authToken}`
-            },
-            body: JSON.stringify({
-              text_content: "According to Acme Global shipping policy: Orders dispatched via Express Courier take 1-2 business days with SMS alerts. International shipments arrive in 3-5 days via DHL.",
-              content_type: 'text'
-            })
-          });
-        } catch (e) {
-          console.error("AI reply sync error:", e);
+      if (!authToken || !activeConvId) return;
+      const label = document.getElementById('btnAiCopilotLabel');
+      const input = document.getElementById('chatInput');
+      label.textContent = 'Drafting...';
+      try {
+        const res = await fetch(`/api/v1/conversations/${activeConvId}/suggest-reply`, {
+          method: 'POST',
+          headers: { 'Authorization': `Bearer ${authToken}` }
+        });
+        const json = await res.json();
+        if (json.success) {
+          // A draft only: the agent reviews and edits it before pressing Send
+          input.value = json.data.suggested_reply;
+          input.focus();
+        } else {
+          alert("Could not draft a reply: " + (json.error?.message || 'Server error'));
         }
+      } catch (e) {
+        alert("Network error: " + e.message);
+      } finally {
+        label.textContent = 'AI Draft Reply';
       }
     }
 
-    function resolveCurrentChat() {
-      alert("Conversation marked as RESOLVED. Post-chat 5-star CSAT survey dispatched via WhatsApp!");
-    }
-
-    function quickSeedDemoData() {
-      alert("Demo omnichannel conversations and CRM contacts populated from PostgreSQL.");
+    async function resolveCurrentChat() {
+      if (!authToken || !activeConvId) return;
+      if (!confirm("Mark this conversation as resolved? The AI bot will handle the customer's next message.")) return;
+      try {
+        const res = await fetch(`/api/v1/conversations/${activeConvId}/resolve`, {
+          method: 'POST',
+          headers: { 'Authorization': `Bearer ${authToken}` }
+        });
+        const json = await res.json();
+        if (!json.success) {
+          alert("Could not resolve: " + (json.error?.message || 'Server error'));
+          return;
+        }
+        await fetchLiveConversations(true);
+      } catch (e) {
+        alert("Network error: " + e.message);
+      }
     }
 
     let currentKbId = null;
@@ -2101,6 +2086,22 @@
           headers: { 'Authorization': `Bearer ${authToken}` }
         });
         const json = await res.json();
+        if (json.success && json.data && json.data.length === 0) {
+          // New workspace: create its first knowledge base so uploads work immediately
+          const created = await fetch('/api/v1/rag/', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${authToken}` },
+            body: JSON.stringify({ name: 'Main Knowledge Base' })
+          }).then(r => r.json());
+          if (created.success) {
+            json.data = [created.data];
+          } else {
+            // A concurrent load may have created it first (409); use that one
+            json.data = (await fetch('/api/v1/rag/', {
+              headers: { 'Authorization': `Bearer ${authToken}` }
+            }).then(r => r.json())).data || [];
+          }
+        }
         if (json.success && json.data && json.data.length > 0) {
           const kb = json.data[0];
           currentKbId = kb.id;
@@ -2127,24 +2128,37 @@
         const tbody = document.getElementById('ragDocsTableBody');
         if (json.success && json.data && json.data.length > 0) {
           tbody.innerHTML = json.data.map(doc => {
-            const ext = doc.title.split('.').pop().toUpperCase();
+            const ext = doc.title.includes('.') ? doc.title.split('.').pop().toUpperCase() : 'TEXT';
+            const statusStyle = {
+              indexed: 'bg-emerald-50 text-emerald-700 border-emerald-200',
+              pending: 'bg-amber-50 text-amber-700 border-amber-200',
+              failed: 'bg-rose-50 text-rose-700 border-rose-200'
+            }[doc.status] || 'bg-slate-100 text-slate-700 border-slate-200';
+            const dotStyle = { indexed: 'bg-emerald-500', pending: 'bg-amber-500', failed: 'bg-rose-500' }[doc.status] || 'bg-slate-400';
             const sizeKb = (doc.file_size_bytes / 1024).toFixed(1);
             const dateStr = new Date(doc.created_at).toLocaleDateString([], { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' });
             return `
               <tr class="hover:bg-slate-50">
                 <td class="py-3 font-semibold text-slate-900 flex items-center gap-2">
                   <i data-lucide="file-text" class="w-4 h-4 text-emerald-600"></i>
-                  <span>${doc.title}</span>
+                  <span>${escapeHtml(doc.title)}</span>
                 </td>
-                <td class="py-3"><span class="px-2 py-0.5 rounded bg-slate-100 text-slate-700 font-mono text-[10px] border border-slate-200 font-semibold">${ext}</span></td>
+                <td class="py-3"><span class="px-2 py-0.5 rounded bg-slate-100 text-slate-700 font-mono text-[10px] border border-slate-200 font-semibold">${escapeHtml(ext)}</span></td>
                 <td class="py-3 text-slate-500">${sizeKb} KB</td>
                 <td class="py-3 text-emerald-600 font-bold">${doc.chunk_count || 1} chunks</td>
                 <td class="py-3">
-                  <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded bg-emerald-50 text-emerald-700 border border-emerald-200 font-semibold capitalize text-[10px]">
-                    <span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span> ${doc.status}
+                  <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded border ${statusStyle} font-semibold capitalize text-[10px]" title="${doc.status === 'pending' ? 'Keyword search only until embeddings are generated' : ''}">
+                    <span class="w-1.5 h-1.5 rounded-full ${dotStyle}"></span> ${escapeHtml(doc.status)}
                   </span>
                 </td>
-                <td class="py-3 text-right text-slate-500">${dateStr}</td>
+                <td class="py-3 text-right text-slate-500">
+                  <span class="inline-flex items-center gap-2">
+                    <span>${dateStr}</span>
+                    <button onclick="deleteRAGDocument('${doc.id}')" data-title="${escapeHtml(doc.title)}" title="Delete document" class="p-1 rounded-lg text-slate-400 hover:text-rose-600 hover:bg-rose-50 transition">
+                      <i data-lucide="trash-2" class="w-3.5 h-3.5"></i>
+                    </button>
+                  </span>
+                </td>
               </tr>
             `;
           }).join('');
@@ -2156,6 +2170,26 @@
         }
       } catch (err) {
         console.error("Error fetching documents:", err);
+      }
+    }
+
+    async function deleteRAGDocument(docId) {
+      if (!currentKbId || !authToken) return;
+      if (!confirm("Delete this document? Live bots will stop using it immediately.")) return;
+      try {
+        const res = await fetch(`/api/v1/rag/${currentKbId}/documents/${docId}`, {
+          method: 'DELETE',
+          headers: { 'Authorization': `Bearer ${authToken}` }
+        });
+        const json = await res.json();
+        if (json.success) {
+          await fetchLiveDocuments(currentKbId);
+          await loadKnowledgeGaps();
+        } else {
+          alert("Failed to delete: " + (json.error?.message || "Server error"));
+        }
+      } catch (err) {
+        alert("Error: " + err.message);
       }
     }
 
@@ -2186,7 +2220,7 @@
         const json = await res.json();
         if (json.success) {
           statusDiv.className = "text-xs p-3 rounded-xl bg-emerald-950/80 border border-emerald-500/40 text-emerald-300 block";
-          statusDiv.innerHTML = `✅ Successfully ingested <strong>${selectedFile.name}</strong>! Parsed, segmented into semantic chunks, and embedded into PostgreSQL pgvector.`;
+          statusDiv.innerHTML = `✅ Successfully ingested <strong>${escapeHtml(selectedFile.name)}</strong>! Parsed, segmented into semantic chunks, and embedded into PostgreSQL pgvector.`;
           selectedFile = null;
           document.getElementById('ragFileInput').value = '';
           document.getElementById('ragFileNameDisplay').textContent = "Click to browse or drag & drop PDF, TXT, MD or CSV file";
@@ -2238,7 +2272,7 @@
         const json = await res.json();
         if (json.success) {
           statusDiv.className = "text-xs p-3 rounded-xl bg-emerald-950/80 border border-emerald-500/40 text-emerald-300 block";
-          statusDiv.innerHTML = `✅ Successfully indexed <strong>${title}</strong> into PostgreSQL pgvector! AI Agent is now immediately aware of this knowledge.`;
+          statusDiv.innerHTML = `✅ Successfully indexed <strong>${escapeHtml(title)}</strong> into PostgreSQL pgvector! AI Agent is now immediately aware of this knowledge.`;
           document.getElementById('ragDocTitle').value = '';
           document.getElementById('ragDocText').value = '';
           await fetchLiveDocuments(currentKbId);
@@ -2290,21 +2324,21 @@
                 <div class="flex items-center justify-between font-bold text-slate-900">
                   <div class="flex items-center gap-2">
                     <span class="w-5 h-5 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200 flex items-center justify-center text-[10px] font-mono">#${i + 1}</span>
-                    <span class="text-xs text-slate-900">${chunk.document_title || 'Document Chunk'}</span>
+                    <span class="text-xs text-slate-900">${escapeHtml(chunk.document_title || 'Document Chunk')}</span>
                   </div>
-                  <span class="text-emerald-700 font-mono text-[11px] bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200">Cosine Match: ${chunk.score} (${scorePercent}%)</span>
+                  <span class="text-emerald-700 font-mono text-[11px] bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200">${chunk.match_type === 'keyword' ? 'Keyword Match' : 'Cosine Match'}: ${chunk.score} (${scorePercent}%)</span>
                 </div>
-                <p class="text-slate-700 text-xs leading-relaxed bg-white p-2.5 rounded-lg border border-slate-200">${chunk.content_text}</p>
-                <div class="text-[10px] text-slate-500">Tokens: ${chunk.token_count} • Dense Vector (1536d)</div>
+                <p class="text-slate-700 text-xs leading-relaxed bg-white p-2.5 rounded-lg border border-slate-200 whitespace-pre-line">${escapeHtml(chunk.content_text)}</p>
+                <div class="text-[10px] text-slate-500">Tokens: ${chunk.token_count} • ${chunk.match_type === 'keyword' ? 'Keyword fallback (embeddings unavailable)' : 'Dense Vector (1536d)'}</div>
               </div>
             `;
           }).join('');
           lucide.createIcons();
         } else {
-          box.innerHTML = `<p class="text-amber-400">No matching chunks found above threshold in vector DB.</p>`;
+          box.innerHTML = `<p class="text-amber-600">${json.success ? 'No matching chunks found in this knowledge base.' : escapeHtml(json.error?.message || 'Search failed')}</p>`;
         }
       } catch (err) {
-        box.innerHTML = `<p class="text-rose-400">Search error: ${err.message}</p>`;
+        box.innerHTML = `<p class="text-rose-400">Search error: ${escapeHtml(err.message)}</p>`;
       } finally {
         btn.disabled = false;
       }
@@ -2444,7 +2478,7 @@
         const accountInfo = (isConn && item.account_identifier)
           ? `<div class="text-[11px] text-emerald-700 font-mono truncate bg-emerald-50 px-2 py-1 rounded-md border border-emerald-200 flex items-center gap-1.5">
                <i data-lucide="check-circle" class="w-3 h-3 text-emerald-600 shrink-0"></i>
-               <span class="truncate">${item.account_identifier}</span>
+               <span class="truncate">${escapeHtml(item.account_identifier)}</span>
              </div>`
           : '';
 
@@ -2461,8 +2495,8 @@
 
               <!-- Name & Description -->
               <div>
-                <h3 class="text-sm font-bold text-slate-900 group-hover:text-emerald-600 transition">${item.name}</h3>
-                <p class="text-xs text-slate-500 leading-relaxed mt-1 line-clamp-2">${item.description}</p>
+                <h3 class="text-sm font-bold text-slate-900 group-hover:text-emerald-600 transition">${escapeHtml(item.name)}</h3>
+                <p class="text-xs text-slate-500 leading-relaxed mt-1 line-clamp-2">${escapeHtml(item.description)}</p>
               </div>
 
               ${accountInfo}
@@ -2471,7 +2505,7 @@
             <!-- Bottom Row: Category Badge & Action Button -->
             <div class="flex items-center justify-between pt-3 border-t border-slate-100">
               <span class="px-2 py-0.5 rounded-md text-[10px] font-semibold uppercase tracking-wider bg-slate-100 text-slate-600 border border-slate-200">
-                ${item.badge_label || item.category}
+                ${escapeHtml(item.badge_label || item.category)}
               </span>
               ${actionBtn}
             </div>
@@ -2595,7 +2629,7 @@
         const json = await res.json();
         if (json.success) {
           statusDiv.className = 'text-xs p-3 rounded-xl bg-emerald-950/80 border border-emerald-500/40 text-emerald-300 block';
-          statusDiv.innerHTML = `✅ <strong>${selectedAppToConnect.name}</strong> verified and connected successfully!`;
+          statusDiv.innerHTML = `✅ <strong>${escapeHtml(selectedAppToConnect.name)}</strong> verified and connected successfully!`;
           setTimeout(() => {
             closeConnectModal();
             loadIntegrationsData();
@@ -2684,7 +2718,7 @@
         const json = await res.json();
         if (json.success) {
           statusDiv.className = 'text-xs p-3 rounded-xl bg-emerald-950/80 border border-emerald-500/40 text-emerald-300 block';
-          statusDiv.innerHTML = `✅ Thank you! Your request for <strong>${name}</strong> has been logged.`;
+          statusDiv.innerHTML = `✅ Thank you! Your request for <strong>${escapeHtml(name)}</strong> has been logged.`;
           setTimeout(() => {
             closeRequestIntegrationModal();
           }, 1200);
@@ -2728,8 +2762,9 @@
             currentAgentStudioState.agent_id = data.active_agent.id;
             const badgeText = document.getElementById('builder-badge-text');
             if (badgeText) {
-              const ver = data.current_version ? `v${data.current_version.version_number}` : 'v1';
-              badgeText.textContent = `Live Bot: ${data.active_agent.name} (${ver})`;
+              badgeText.textContent = data.current_version
+                ? `Live Bot: ${data.active_agent.name} (v${data.current_version.version_number})`
+                : 'Live Bot: Not deployed yet';
             }
           }
 
@@ -2810,7 +2845,7 @@
         <div class="flex items-center justify-between p-2 rounded-xl bg-slate-50 border border-slate-200 text-xs text-slate-800 group hover:border-emerald-500/50 transition">
           <div class="flex items-center gap-2 overflow-hidden">
             <span class="w-1.5 h-1.5 rounded-full bg-emerald-500 shrink-0"></span>
-            <span class="truncate font-medium">${rule}</span>
+            <span class="truncate font-medium">${escapeHtml(rule)}</span>
           </div>
           <button type="button" onclick="removeBusinessRule(${idx})" class="text-slate-400 hover:text-rose-600 p-1 transition">
             <i data-lucide="trash-2" class="w-3.5 h-3.5"></i>
@@ -2846,7 +2881,7 @@
         <div class="flex items-center justify-between p-2 rounded-xl bg-slate-50 border border-slate-200 text-xs text-slate-800 group hover:border-rose-500/50 transition">
           <div class="flex items-center gap-2 overflow-hidden">
             <span class="w-1.5 h-1.5 rounded-full bg-rose-500 shrink-0"></span>
-            <span class="truncate font-medium">${constraint}</span>
+            <span class="truncate font-medium">${escapeHtml(constraint)}</span>
           </div>
           <button type="button" onclick="removeConstraint(${idx})" class="text-slate-400 hover:text-rose-600 p-1 transition">
             <i data-lucide="trash-2" class="w-3.5 h-3.5"></i>
@@ -2998,7 +3033,7 @@
       chatBox.innerHTML += `
         <div class="flex items-start justify-end gap-2">
           <div class="bg-emerald-600/30 border border-emerald-500/40 p-2.5 rounded-xl rounded-tr-none max-w-[85%] text-slate-100">
-            ${userText}
+            ${escapeHtml(userText)}
           </div>
           <div class="w-6 h-6 rounded-lg bg-emerald-500 text-slate-950 flex items-center justify-center font-bold text-[10px]">
             You
@@ -3041,7 +3076,7 @@
 
         if (json.success && json.data) {
           const reply = json.data.reply;
-          const sourceBadge = json.data.source === 'gemini_llm' ? '🤖 Gemini 1.5' : '⚡ Smart Simulation';
+          const sourceBadge = json.data.source === 'gemini_llm' ? '🤖 Gemini' : '⚡ Offline preview';
           const chunksBadge = json.data.grounded_kb_chunks_count ? ` • 📚 ${json.data.grounded_kb_chunks_count} KB chunks` : '';
           
           chatBox.innerHTML += `
@@ -3050,7 +3085,7 @@
                 AI
               </div>
               <div class="bg-white border border-slate-200 p-2.5 rounded-xl rounded-tl-none max-w-[85%] text-slate-800 space-y-1 shadow-xs">
-                <div>${reply}</div>
+                <div class="whitespace-pre-line">${escapeHtml(reply)}</div>
                 <div class="text-[9px] text-slate-500 pt-1 border-t border-slate-100 font-mono">${sourceBadge}${chunksBadge}</div>
               </div>
             </div>
@@ -3059,7 +3094,7 @@
           chatBox.innerHTML += `
             <div class="flex items-start gap-2 text-rose-400">
               <div class="p-2 bg-rose-950/60 border border-rose-500/30 rounded-xl text-xs">
-                Simulation error: ${json.error?.message || 'Server error'}
+                Simulation error: ${escapeHtml(json.error?.message || 'Server error')}
               </div>
             </div>
           `;
@@ -3069,7 +3104,7 @@
         if (typingEl) typingEl.remove();
         chatBox.innerHTML += `
           <div class="p-2 bg-rose-950/60 border border-rose-500/30 rounded-xl text-xs text-rose-300">
-            Network error: ${err.message}
+            Network error: ${escapeHtml(err.message)}
           </div>
         `;
       } finally {
@@ -3223,12 +3258,12 @@
             <div class="flex items-start justify-between gap-3">
               <div class="space-y-1 overflow-hidden">
                 <div class="flex flex-wrap items-center gap-2">
-                  <span class="px-2 py-0.5 rounded bg-slate-100 text-slate-700 font-mono text-[10px] uppercase font-bold border border-slate-200">${gap.channel}</span>
+                  <span class="px-2 py-0.5 rounded bg-slate-100 text-slate-700 font-mono text-[10px] uppercase font-bold border border-slate-200">${escapeHtml(gap.channel)}</span>
                   ${freqBadge}
                   ${statusBadge}
                   <span class="text-[10px] text-slate-500">Last: ${dateStr}</span>
                 </div>
-                <h4 class="text-xs font-bold text-slate-900 pt-0.5">${gap.question}</h4>
+                <h4 class="text-xs font-bold text-slate-900 pt-0.5">${escapeHtml(gap.question)}</h4>
               </div>
               <div class="flex items-center gap-1.5 shrink-0">
                 ${!isResolved ? `
@@ -3267,7 +3302,7 @@
                 ` : ''}
               </div>
               <p class="text-slate-700" id="gapAnswer-${gap.id}">
-                ${gap.suggested_answer || '<span class="text-slate-400 italic">No answer drafted yet. Click "Generate Draft with Gemini" or "+ Add to KB" to write.</span>'}
+                ${gap.suggested_answer ? escapeHtml(gap.suggested_answer) : '<span class="text-slate-400 italic">No answer drafted yet. Click "Generate Draft with Gemini" or "+ Add to KB" to write.</span>'}
               </p>
             </div>
           </div>
@@ -3375,6 +3410,10 @@
         alert("Please enter a valid answer (minimum 5 characters).");
         return;
       }
+      if (/\[[^\]]+\]/.test(answerText) &&
+          !confirm("This answer still contains placeholders like [price]. Bots will send them to customers as-is. Index anyway?")) {
+        return;
+      }
 
       btn.disabled = true;
       btn.innerHTML = `<span class="animate-spin mr-1">🌀</span> Indexing in pgvector...`;
@@ -3388,7 +3427,8 @@
           },
           body: JSON.stringify({
             answer_text: answerText,
-            doc_title: docTitle || null
+            doc_title: docTitle || null,
+            knowledge_base_id: currentKbId || null
           })
         });
 

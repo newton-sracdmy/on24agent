@@ -3,7 +3,7 @@
 from typing import List, Optional
 from uuid import UUID
 
-from sqlalchemy import select
+from sqlalchemy import select, tuple_
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
@@ -46,14 +46,25 @@ class MessageRepository(BaseRepository[Message]):
         super().__init__(Message, session)
 
     async def list_by_conversation(
-        self, conversation_id: UUID, limit: int = 50
+        self, conversation_id: UUID, org_id: UUID, limit: int = 50, before_id: Optional[UUID] = None
     ) -> List[Message]:
+        """The newest `limit` messages (or those older than `before_id`), returned oldest first."""
         query = (
             select(Message)
-            .where(Message.conversation_id == conversation_id)
+            .where(Message.conversation_id == conversation_id, Message.organization_id == org_id)
             .options(selectinload(Message.attachments))
-            .order_by(Message.created_at.asc())
-            .limit(limit)
         )
+        if before_id:
+            anchor = (
+                await self.session.execute(
+                    select(Message.created_at, Message.id).where(
+                        Message.id == before_id, Message.conversation_id == conversation_id
+                    )
+                )
+            ).first()
+            if not anchor:
+                return []
+            query = query.where(tuple_(Message.created_at, Message.id) < tuple_(anchor.created_at, anchor.id))
+        query = query.order_by(Message.created_at.desc(), Message.id.desc()).limit(limit)
         result = await self.session.execute(query)
-        return list(result.scalars().all())
+        return list(reversed(result.scalars().all()))

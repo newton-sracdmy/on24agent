@@ -174,6 +174,10 @@ class Settings(BaseSettings):
     # Channels
     # Per-tenant tokens (page/phone/IG account) are stored encrypted in channel_accounts via the UI.
     META_WEBHOOK_VERIFY_TOKEN: Optional[str] = None
+    # App secrets used to verify X-Hub-Signature-256 on Meta webhooks. Unsigned or wrongly
+    # signed deliveries are rejected for every channel whose secret is set.
+    META_APP_SECRET: Optional[str] = None
+    INSTAGRAM_APP_SECRET: Optional[str] = None
     TELEGRAM_BOT_TOKEN: Optional[str] = None
     TELEGRAM_WEBHOOK_SECRET: Optional[str] = None
 

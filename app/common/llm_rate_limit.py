@@ -19,6 +19,7 @@ LIMITS_PER_MINUTE = {
     "test": 30,
     "gap_suggest": 20,
     "gap_scan": 5,
+    "reply_suggest": 30,
 }
 
 _client: aioredis.Redis | None = None

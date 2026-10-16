@@ -15,6 +15,7 @@ from app.domains.integrations.schemas import (
     IntegrationItem,
     IntegrationListResponse,
 )
+from app.exceptions import ResourceConflictError
 from app.security import decrypt_secret, encrypt_secret
 
 logger = logging.getLogger("integrations_service")
@@ -364,6 +365,25 @@ class IntegrationsService:
                 channel_id = q_ins.scalar_one()
             else:
                 channel_id = ch_row["id"]
+
+            # Inbound webhooks are routed by identifier, so one number/page/account can belong to one workspace
+            if identifier != f"{slug}_default":
+                q_taken = await session.execute(
+                    text(
+                        """
+                        SELECT 1 FROM channel_accounts
+                        WHERE channel_id = :channel_id AND account_identifier = :identifier
+                          AND organization_id <> :org_id AND is_deleted = false
+                        LIMIT 1;
+                        """
+                    ),
+                    {"org_id": org_id, "channel_id": channel_id, "identifier": identifier},
+                )
+                if q_taken.first():
+                    raise ResourceConflictError(
+                        f"This {catalog_entry['name']} account is already connected to another workspace. "
+                        "Disconnect it there first."
+                    )
 
             # Upsert into channel_accounts for this organization
             # 1. First check if an account with the exact same identifier already exists (regardless of is_deleted)
