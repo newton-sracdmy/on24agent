@@ -10,6 +10,7 @@ All API responses follow a predictable JSON contract:
 """
 
 from datetime import datetime
+from enum import Enum
 from typing import Any, Dict, Generic, List, Optional, TypeVar
 from uuid import UUID
 
@@ -117,3 +118,12 @@ class CursorPaginatedResponse(BaseSchema, Generic[T]):
 
     items: List[T]
     pagination: CursorPaginationMeta
+
+
+def enum_value(value):
+    """Plain value of an enum field.
+
+    BaseSchema uses use_enum_values, so a field holds a str when the client sent it but the
+    Enum member when its default applied; this handles both.
+    """
+    return value.value if isinstance(value, Enum) else value

@@ -130,7 +130,7 @@ async def _process_instagram_message(
             text(
                 """
                 SELECT id FROM contacts
-                WHERE organization_id = :org_id
+                WHERE organization_id = :org_id AND is_deleted = false
                   AND custom_attributes->>'igsid' = :igsid
                 LIMIT 1;
                 """
@@ -157,6 +157,7 @@ async def _process_instagram_message(
                 },
             )
             contact_id = q_ins_contact.scalar_one()
+            await inbound.log_contact_event(session, org_id, contact_id, "created", {"source": "instagram"})
 
         # 3. Thread the message and make it visible in the inbox right away
         conversation_id = await inbound.upsert_conversation(

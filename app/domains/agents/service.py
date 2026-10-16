@@ -11,6 +11,7 @@ import httpx
 from sqlalchemy import select, text
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.common.schemas import enum_value
 from app.config import settings
 from app.constants import AgentExecutionMode
 from app.domains.agents.models import (
@@ -162,7 +163,7 @@ class AgentService:
             organization_id=org_id,
             name=data.name,
             description=data.description,
-            mode=data.mode.value,
+            mode=enum_value(data.mode),
         )
         self.session.add(agent)
         await self.session.flush()

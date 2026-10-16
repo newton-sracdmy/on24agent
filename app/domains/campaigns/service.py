@@ -5,6 +5,7 @@ from uuid import UUID
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.common.schemas import enum_value
 from app.constants import CampaignStatus, TemplateApprovalStatus
 from app.domains.campaigns.models import Campaign, CampaignSegment, MessageTemplate
 from app.domains.campaigns.schemas import (
@@ -26,7 +27,7 @@ class CampaignService:
             channel_account_id=data.channel_account_id,
             name=data.name,
             language=data.language,
-            category=data.category.value,
+            category=enum_value(data.category),
             components_json=data.components_json,
             status=TemplateApprovalStatus.DRAFT.value,
         )

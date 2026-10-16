@@ -14,6 +14,7 @@ from sqlalchemy import delete, func, select, text, update
 from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.common.schemas import enum_value
 from app.constants import ChunkingStrategy, DocumentSourceType, IngestionJobStatus
 from app.domains.ai.embedding_service import EMBEDDING_MODEL, embed_query, embed_texts
 from app.domains.ai.gemini_service import generate_gemini_response
@@ -152,7 +153,7 @@ class RAGService:
             name=data.name,
             description=data.description,
             embedding_model_id=model_id,
-            distance_metric=data.distance_metric.value,
+            distance_metric=enum_value(data.distance_metric),
         )
         self.session.add(kb)
         await self.session.flush()

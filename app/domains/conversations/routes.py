@@ -39,6 +39,7 @@ async def list_conversations(
     page: int = Query(1, ge=1),
     page_size: int = Query(20, ge=1, le=100),
     status_filter: Optional[ConversationStatus] = Query(None, alias="status"),
+    contact_id: Optional[UUID] = Query(None),
     user_context: AuthenticatedUserContext = Depends(require_tenant),
     db: AsyncSession = Depends(get_db, scope="function"),
 ) -> APIResponse[PaginatedResponse[ConversationResponse]]:
@@ -47,6 +48,7 @@ async def list_conversations(
     items, meta = await service.list_conversations(
         user_context.organization_id, page, page_size,
         status=status_filter.value if status_filter else None,
+        contact_id=contact_id,
     )
     return APIResponse.ok(data=PaginatedResponse(items=await service.to_responses(items), pagination=meta))
 

@@ -211,15 +211,29 @@
       <!-- TAB 2: CONTACTS & CRM -->
       <!-- ============================================================== -->
       <section id="tab-contacts" class="flex-1 p-8 overflow-y-auto hidden">
-        <div class="max-w-6xl mx-auto space-y-6">
-          <div class="flex items-center justify-between">
+        <div class="max-w-6xl mx-auto space-y-5">
+          <div class="flex items-center justify-between gap-4">
             <div>
               <h2 class="text-xl font-bold text-slate-900">Contacts & CRM Master</h2>
-              <p class="text-xs text-slate-500">Unified customer directory across WhatsApp, Instagram, Telegram, and Web</p>
+              <p class="text-xs text-slate-500">Unified customer directory across WhatsApp, Messenger, Instagram and Web</p>
             </div>
-            <button onclick="alert('Creating contact via POST /api/v1/contacts/')" class="px-4 py-2 bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs rounded-xl shadow-xs transition">
+            <button onclick="openContactForm()" class="px-4 py-2 bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs rounded-xl shadow-xs transition whitespace-nowrap">
               + New Contact
             </button>
+          </div>
+
+          <!-- Toolbar -->
+          <div class="flex flex-wrap items-center gap-2">
+            <div class="relative flex-1 min-w-[220px]">
+              <i data-lucide="search" class="w-3.5 h-3.5 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2"></i>
+              <input id="contactSearch" type="search" placeholder="Search name, phone or email..." oninput="onContactSearchInput()" class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs text-slate-900 focus:outline-none focus:bg-white focus:border-emerald-500 pl-8">
+            </div>
+            <select id="contactStageFilter" onchange="loadContacts(1)" class="px-3 py-2 bg-white border border-slate-200 rounded-xl text-xs text-slate-700">
+              <option value="">All stages</option>
+            </select>
+            <select id="contactTagFilter" onchange="loadContacts(1)" class="px-3 py-2 bg-white border border-slate-200 rounded-xl text-xs text-slate-700">
+              <option value="">All tags</option>
+            </select>
           </div>
 
           <div class="rounded-2xl border border-slate-200 bg-white overflow-hidden shadow-xs">
@@ -227,36 +241,116 @@
               <thead class="bg-slate-50 text-slate-500 uppercase font-semibold border-b border-slate-200">
                 <tr>
                   <th class="p-4">Name</th>
-                  <th class="p-4">Channel / Identifier</th>
+                  <th class="p-4">Phone / Channels</th>
                   <th class="p-4">Lifecycle Stage</th>
                   <th class="p-4">Tags</th>
                   <th class="p-4">Last Activity</th>
                 </tr>
               </thead>
               <tbody class="divide-y divide-slate-100" id="contactsTableBody">
-                <tr class="hover:bg-slate-50">
-                  <td class="p-4 font-bold text-slate-900">Tariq Al-Mansoor</td>
-                  <td class="p-4 text-slate-600">+966 50 123 4567 (WhatsApp)</td>
-                  <td class="p-4"><span class="px-2 py-0.5 rounded bg-emerald-50 text-emerald-700 border border-emerald-200 font-semibold">Sales Qualified</span></td>
-                  <td class="p-4"><span class="px-2 py-0.5 rounded bg-slate-100 text-slate-700 border border-slate-200 font-medium">Enterprise VIP</span></td>
-                  <td class="p-4 text-slate-500">Just now</td>
-                </tr>
-                <tr class="hover:bg-slate-50">
-                  <td class="p-4 font-bold text-slate-900">Fatima Zahra</td>
-                  <td class="p-4 text-slate-600">fatima@techmena.sa (Web)</td>
-                  <td class="p-4"><span class="px-2 py-0.5 rounded bg-sky-50 text-sky-700 border border-sky-200 font-semibold">Lead</span></td>
-                  <td class="p-4"><span class="px-2 py-0.5 rounded bg-slate-100 text-slate-700 border border-slate-200 font-medium">Arabic First</span></td>
-                  <td class="p-4 text-slate-500">14m ago</td>
-                </tr>
-                <tr class="hover:bg-slate-50">
-                  <td class="p-4 font-bold text-slate-900">Karim Boutros</td>
-                  <td class="p-4 text-slate-600">+971 52 987 6543 (Telegram)</td>
-                  <td class="p-4"><span class="px-2 py-0.5 rounded bg-amber-50 text-amber-700 border border-amber-200 font-semibold">Customer</span></td>
-                  <td class="p-4"><span class="px-2 py-0.5 rounded bg-slate-100 text-slate-700 border border-slate-200 font-medium">Standard Plan</span></td>
-                  <td class="p-4 text-slate-500">2h ago</td>
-                </tr>
+                <tr><td colspan="5" class="p-6 text-center text-slate-400 italic">Loading contacts...</td></tr>
               </tbody>
             </table>
+            <div class="flex items-center justify-between px-4 py-3 border-t border-slate-100 text-[11px] text-slate-500">
+              <span id="contactsPageInfo"></span>
+              <div class="flex gap-2">
+                <button id="contactsPrev" onclick="loadContacts(contactsPage - 1)" class="px-3 py-1 rounded-lg border border-slate-200 bg-white hover:bg-slate-50 disabled:opacity-40">Previous</button>
+                <button id="contactsNext" onclick="loadContacts(contactsPage + 1)" class="px-3 py-1 rounded-lg border border-slate-200 bg-white hover:bg-slate-50 disabled:opacity-40">Next</button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Create / Edit Contact Modal -->
+        <div id="modalContactForm" class="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden">
+          <div class="w-full max-w-md bg-white border border-emerald-200 rounded-2xl p-6 shadow-2xl space-y-4">
+            <div class="flex items-center justify-between pb-3 border-b border-slate-200">
+              <h3 class="text-sm font-bold text-slate-900" id="contactFormTitle">New Contact</h3>
+              <button onclick="closeContactForm()" class="text-slate-400 hover:text-slate-700 transition"><i data-lucide="x" class="w-4 h-4"></i></button>
+            </div>
+            <input type="hidden" id="contactFormId">
+            <div class="grid grid-cols-2 gap-3 text-xs">
+              <div>
+                <label class="block text-[11px] font-semibold text-slate-700 mb-1">First name</label>
+                <input id="contactFormFirst" type="text" maxlength="100" class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs text-slate-900 focus:outline-none focus:bg-white focus:border-emerald-500">
+              </div>
+              <div>
+                <label class="block text-[11px] font-semibold text-slate-700 mb-1">Last name</label>
+                <input id="contactFormLast" type="text" maxlength="100" class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs text-slate-900 focus:outline-none focus:bg-white focus:border-emerald-500">
+              </div>
+              <div class="col-span-2">
+                <label class="block text-[11px] font-semibold text-slate-700 mb-1">Phone (with country code)</label>
+                <input id="contactFormPhone" type="tel" placeholder="+8801711000000" class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs text-slate-900 focus:outline-none focus:bg-white focus:border-emerald-500">
+              </div>
+              <div class="col-span-2">
+                <label class="block text-[11px] font-semibold text-slate-700 mb-1">Email</label>
+                <input id="contactFormEmail" type="email" placeholder="name@example.com" class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs text-slate-900 focus:outline-none focus:bg-white focus:border-emerald-500">
+              </div>
+              <div class="col-span-2">
+                <label class="block text-[11px] font-semibold text-slate-700 mb-1">Lifecycle stage</label>
+                <select id="contactFormStage" class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs text-slate-900 focus:outline-none focus:bg-white focus:border-emerald-500"></select>
+              </div>
+            </div>
+            <p id="contactFormError" class="hidden text-xs p-2.5 rounded-lg bg-rose-50 border border-rose-200 text-rose-700"></p>
+            <div class="flex justify-end gap-2 pt-1">
+              <button onclick="closeContactForm()" class="px-4 py-2 rounded-xl border border-slate-200 text-xs font-semibold text-slate-700 hover:bg-slate-50">Cancel</button>
+              <button id="contactFormSave" onclick="submitContactForm()" class="px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold">Save Contact</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Contact Detail Panel -->
+        <div id="contactPanel" class="fixed inset-0 bg-slate-900/30 z-40 hidden" onclick="if (event.target === this) closeContactPanel()">
+          <div class="absolute right-0 top-0 h-full w-full max-w-md bg-white border-l border-slate-200 shadow-2xl overflow-y-auto p-6 space-y-5 text-xs">
+            <div class="flex items-start justify-between gap-3">
+              <div class="flex items-center gap-3 min-w-0">
+                <div id="contactPanelAvatar" class="w-11 h-11 rounded-full bg-emerald-50 border border-emerald-200 flex items-center justify-center font-bold text-emerald-700 shrink-0"></div>
+                <div class="min-w-0">
+                  <h3 id="contactPanelName" class="text-sm font-bold text-slate-900 truncate"></h3>
+                  <p id="contactPanelSub" class="text-[11px] text-slate-500 truncate"></p>
+                </div>
+              </div>
+              <button onclick="closeContactPanel()" class="text-slate-400 hover:text-slate-700"><i data-lucide="x" class="w-4 h-4"></i></button>
+            </div>
+
+            <div class="flex flex-wrap gap-2">
+              <button onclick="openContactForm(currentContact)" class="px-3 py-1.5 rounded-lg border border-slate-200 font-semibold text-slate-700 hover:bg-slate-50">Edit</button>
+              <button id="contactPanelInboxBtn" onclick="openContactInInbox()" class="px-3 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white font-bold">Open in Inbox</button>
+              <button id="contactPanelBlockBtn" onclick="toggleContactBlocked()" class="px-3 py-1.5 rounded-lg border border-amber-200 bg-amber-50 text-amber-800 font-semibold hover:bg-amber-100"></button>
+              <button onclick="deleteCurrentContact()" class="px-3 py-1.5 rounded-lg border border-rose-200 bg-rose-50 text-rose-700 font-semibold hover:bg-rose-100">Delete</button>
+            </div>
+
+            <div class="space-y-1.5" id="contactPanelDetails"></div>
+
+            <div>
+              <label class="block text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-1.5">Lifecycle Stage</label>
+              <select id="contactPanelStage" onchange="changeContactStage(this.value)" class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs text-slate-900 focus:outline-none focus:bg-white focus:border-emerald-500"></select>
+            </div>
+
+            <div>
+              <div class="flex items-center justify-between mb-1.5">
+                <label class="text-[11px] font-bold text-slate-500 uppercase tracking-wider">Tags</label>
+              </div>
+              <div id="contactPanelTags" class="flex flex-wrap gap-1.5"></div>
+              <div class="flex gap-2 mt-2">
+                <input id="newTagName" type="text" maxlength="50" placeholder="New tag name" class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs text-slate-900 focus:outline-none focus:bg-white focus:border-emerald-500" onkeydown="if (event.key === 'Enter') createTagAndAttach()">
+                <button onclick="createTagAndAttach()" class="px-3 py-1.5 rounded-lg border border-slate-200 font-semibold text-slate-700 hover:bg-slate-50 whitespace-nowrap">+ Add</button>
+              </div>
+            </div>
+
+            <div>
+              <label class="block text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-1.5">Internal Notes</label>
+              <textarea id="newNoteText" rows="2" maxlength="5000" placeholder="Visible to your team only..." class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs text-slate-900 focus:outline-none focus:bg-white focus:border-emerald-500"></textarea>
+              <div class="flex justify-end mt-1.5">
+                <button onclick="addContactNote()" class="px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-white font-semibold">Add Note</button>
+              </div>
+              <div id="contactPanelNotes" class="space-y-2 mt-2"></div>
+            </div>
+
+            <div>
+              <label class="block text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-1.5">Activity Timeline</label>
+              <div id="contactPanelEvents" class="space-y-1.5"></div>
+            </div>
           </div>
         </div>
       </section>
@@ -1704,29 +1798,381 @@
       }
     }
 
+    // ------------------------------------------------------------------------
+    // Contacts & CRM
+    // ------------------------------------------------------------------------
+    const LIFECYCLE_STAGES = [
+      ['lead', 'Lead', 'bg-sky-50 text-sky-700 border-sky-200'],
+      ['marketing_qualified', 'Marketing Qualified', 'bg-indigo-50 text-indigo-700 border-indigo-200'],
+      ['sales_qualified', 'Sales Qualified', 'bg-violet-50 text-violet-700 border-violet-200'],
+      ['opportunity', 'Opportunity', 'bg-amber-50 text-amber-700 border-amber-200'],
+      ['customer', 'Customer', 'bg-emerald-50 text-emerald-700 border-emerald-200'],
+      ['evangelist', 'Evangelist', 'bg-teal-50 text-teal-700 border-teal-200'],
+      ['churned', 'Churned', 'bg-slate-100 text-slate-600 border-slate-200'],
+    ];
+    const STAGE_INFO = Object.fromEntries(LIFECYCLE_STAGES.map(([v, label, cls]) => [v, { label, cls }]));
+    const CONTACTS_PAGE_SIZE = 20;
+    let contactsPage = 1;
+    let contactTags = [];
+    let currentContact = null;
+    let contactSearchTimer = null;
+
+    function contactName(c) {
+      return [c.first_name, c.last_name].filter(Boolean).join(' ') || c.phone_number || c.email || 'Unnamed contact';
+    }
+
+    function stagePill(stage) {
+      const info = STAGE_INFO[stage] || { label: stage, cls: 'bg-slate-100 text-slate-600 border-slate-200' };
+      return `<span class="px-2 py-0.5 rounded border ${info.cls} font-semibold whitespace-nowrap">${escapeHtml(info.label)}</span>`;
+    }
+
+    function tagChip(t, removable = false) {
+      const color = /^#[0-9A-Fa-f]{6}$/.test(t.color_hex) ? t.color_hex : '#6B7280';
+      return `<span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full border text-[10px] font-semibold" style="border-color:${color}55;background:${color}14;color:${color}">
+        ${escapeHtml(t.name)}${removable ? `<button onclick="toggleContactTag('${t.id}')" title="Remove tag" class="hover:opacity-60">×</button>` : ''}
+      </span>`;
+    }
+
+    function fillStageSelect(el, withAll) {
+      el.innerHTML = (withAll ? '<option value="">All stages</option>' : '') +
+        LIFECYCLE_STAGES.map(([v, label]) => `<option value="${v}">${label}</option>`).join('');
+    }
+
+    async function loadContactTags() {
+      const json = await fetch('/api/v1/contacts/tags', { headers: { 'Authorization': `Bearer ${authToken}` } }).then(r => r.json());
+      contactTags = json.success ? json.data : [];
+      const filter = document.getElementById('contactTagFilter');
+      const selected = filter.value;
+      filter.innerHTML = '<option value="">All tags</option>' +
+        contactTags.map(t => `<option value="${t.id}">${escapeHtml(t.name)}</option>`).join('');
+      filter.value = contactTags.some(t => t.id === selected) ? selected : '';
+    }
+
     async function fetchLiveContacts() {
       if (!authToken) return;
+      const stageFilter = document.getElementById('contactStageFilter');
+      if (stageFilter.options.length <= 1) fillStageSelect(stageFilter, true);
+      await loadContactTags();
+      await loadContacts(contactsPage);
+    }
+
+    function onContactSearchInput() {
+      clearTimeout(contactSearchTimer);
+      contactSearchTimer = setTimeout(() => loadContacts(1), 300);
+    }
+
+    async function loadContacts(page = 1) {
+      if (!authToken) return;
+      contactsPage = Math.max(1, page);
+      const params = new URLSearchParams({ page: contactsPage, page_size: CONTACTS_PAGE_SIZE });
+      const q = document.getElementById('contactSearch').value.trim();
+      const stage = document.getElementById('contactStageFilter').value;
+      const tag = document.getElementById('contactTagFilter').value;
+      if (q) params.set('q', q);
+      if (stage) params.set('lifecycle_stage', stage);
+      if (tag) params.set('tag_id', tag);
+
+      const tbody = document.getElementById('contactsTableBody');
       try {
-        const res = await fetch('/api/v1/contacts/', {
-          headers: { 'Authorization': `Bearer ${authToken}` }
-        });
-        const json = await res.json();
-        if (json.success && json.data && json.data.items) {
-          contactsCache = json.data.items;
-          const tbody = document.getElementById('contactsTableBody');
+        const json = await fetch(`/api/v1/contacts/?${params}`, { headers: { 'Authorization': `Bearer ${authToken}` } }).then(r => r.json());
+        if (!json.success) {
+          tbody.innerHTML = `<tr><td colspan="5" class="p-6 text-center text-rose-600">${escapeHtml(json.error?.message || 'Could not load contacts')}</td></tr>`;
+          return;
+        }
+        contactsCache = json.data.items;
+        const meta = json.data.pagination;
+        const filtered = q || stage || tag;
+        if (contactsCache.length === 0) {
+          tbody.innerHTML = `<tr><td colspan="5" class="p-8 text-center text-slate-400 italic">${filtered
+            ? 'No contacts match your search.'
+            : 'No contacts yet. Customers who message you are added automatically, or click "+ New Contact".'}</td></tr>`;
+        } else {
           tbody.innerHTML = contactsCache.map(c => `
-            <tr class="hover:bg-slate-50">
-              <td class="p-4 font-bold text-slate-900">${escapeHtml(`${c.first_name || ''} ${c.last_name || ''}`)}</td>
-              <td class="p-4 text-slate-600">${escapeHtml(c.phone_number || c.email || 'N/A')}</td>
-              <td class="p-4"><span class="px-2 py-0.5 rounded bg-emerald-50 text-emerald-700 border border-emerald-200 font-semibold capitalize">${escapeHtml(c.lifecycle_stage)}</span></td>
-              <td class="p-4"><span class="px-2 py-0.5 rounded bg-slate-100 text-slate-700 border border-slate-200 font-medium">${escapeHtml(c.custom_attributes?.tier || c.custom_attributes?.region || 'Standard')}</span></td>
-              <td class="p-4 text-slate-500">Active</td>
+            <tr class="hover:bg-slate-50 cursor-pointer ${c.is_blocked ? 'opacity-60' : ''}" onclick="openContactPanel('${c.id}')">
+              <td class="p-4">
+                <div class="flex items-center gap-2.5">
+                  <div class="w-8 h-8 rounded-full bg-slate-100 text-slate-700 flex items-center justify-center font-bold text-[11px] shrink-0">${escapeHtml(initials(contactName(c)))}</div>
+                  <div class="min-w-0">
+                    <div class="font-bold text-slate-900 truncate">${escapeHtml(contactName(c))}${c.is_blocked ? ' <span class="text-[10px] text-rose-600 font-semibold">Blocked</span>' : ''}</div>
+                    <div class="text-[11px] text-slate-500 truncate">${escapeHtml(c.email || '')}</div>
+                  </div>
+                </div>
+              </td>
+              <td class="p-4 text-slate-600">
+                <div>${escapeHtml(c.phone_number || '—')}</div>
+                <div class="flex gap-1 mt-1">${(c.channels || []).map(ch => {
+                  const [label, cls] = CHANNEL_BADGES[ch] || [ch, 'bg-slate-100 text-slate-700 border border-slate-200'];
+                  return `<span class="text-[10px] px-1.5 rounded ${cls} font-semibold">${escapeHtml(label)}</span>`;
+                }).join('')}</div>
+              </td>
+              <td class="p-4">${stagePill(c.lifecycle_stage)}</td>
+              <td class="p-4"><div class="flex flex-wrap gap-1">${(c.tags || []).map(t => tagChip(t)).join('') || '<span class="text-slate-400">—</span>'}</div></td>
+              <td class="p-4 text-slate-500 whitespace-nowrap">${c.last_activity_at ? relativeTime(c.last_activity_at) : '—'}</td>
             </tr>
           `).join('');
         }
+        const from = meta.total_count ? (meta.page - 1) * meta.page_size + 1 : 0;
+        const to = Math.min(meta.page * meta.page_size, meta.total_count);
+        document.getElementById('contactsPageInfo').textContent = `Showing ${from}–${to} of ${meta.total_count} contacts`;
+        document.getElementById('contactsPrev').disabled = !meta.has_previous;
+        document.getElementById('contactsNext').disabled = !meta.has_next;
+        lucide.createIcons();
       } catch (e) {
         console.error(e);
+        tbody.innerHTML = `<tr><td colspan="5" class="p-6 text-center text-rose-600">Network error: ${escapeHtml(e.message)}</td></tr>`;
       }
+    }
+
+    // ---- Create / edit form ----
+    function openContactForm(contact = null) {
+      fillStageSelect(document.getElementById('contactFormStage'), false);
+      document.getElementById('contactFormTitle').textContent = contact ? 'Edit Contact' : 'New Contact';
+      document.getElementById('contactFormId').value = contact ? contact.id : '';
+      document.getElementById('contactFormFirst').value = contact?.first_name || '';
+      document.getElementById('contactFormLast').value = contact?.last_name || '';
+      document.getElementById('contactFormPhone').value = contact?.phone_number || '';
+      document.getElementById('contactFormEmail').value = contact?.email || '';
+      document.getElementById('contactFormStage').value = contact?.lifecycle_stage || 'lead';
+      document.getElementById('contactFormError').classList.add('hidden');
+      document.getElementById('modalContactForm').classList.remove('hidden');
+      document.getElementById('contactFormFirst').focus();
+    }
+
+    function closeContactForm() {
+      document.getElementById('modalContactForm').classList.add('hidden');
+    }
+
+    async function submitContactForm() {
+      const id = document.getElementById('contactFormId').value;
+      const val = el => document.getElementById(el).value.trim() || null;
+      const body = {
+        first_name: val('contactFormFirst'),
+        last_name: val('contactFormLast'),
+        phone_number: val('contactFormPhone'),
+        email: val('contactFormEmail'),
+        lifecycle_stage: document.getElementById('contactFormStage').value,
+      };
+      const errorEl = document.getElementById('contactFormError');
+      const btn = document.getElementById('contactFormSave');
+      btn.disabled = true;
+      try {
+        const json = await fetch(id ? `/api/v1/contacts/${id}` : '/api/v1/contacts/', {
+          method: id ? 'PATCH' : 'POST',
+          headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${authToken}` },
+          body: JSON.stringify(body)
+        }).then(r => r.json());
+        if (!json.success) {
+          errorEl.textContent = json.error?.message || 'Could not save contact';
+          errorEl.classList.remove('hidden');
+          return;
+        }
+        closeContactForm();
+        await loadContacts(id ? contactsPage : 1);
+        if (id && currentContact?.id === id) await openContactPanel(id);
+      } catch (e) {
+        errorEl.textContent = 'Network error: ' + e.message;
+        errorEl.classList.remove('hidden');
+      } finally {
+        btn.disabled = false;
+      }
+    }
+
+    // ---- Detail panel ----
+    async function openContactPanel(contactId) {
+      const headers = { 'Authorization': `Bearer ${authToken}` };
+      const json = await fetch(`/api/v1/contacts/${contactId}`, { headers }).then(r => r.json());
+      if (!json.success) {
+        alert(json.error?.message || 'Contact not found');
+        return loadContacts(contactsPage);
+      }
+      currentContact = json.data;
+      const c = currentContact;
+      document.getElementById('contactPanelAvatar').textContent = initials(contactName(c));
+      document.getElementById('contactPanelName').textContent = contactName(c);
+      document.getElementById('contactPanelSub').textContent =
+        `${c.conversation_count} conversation${c.conversation_count === 1 ? '' : 's'} • Customer since ${new Date(c.created_at).toLocaleDateString()}`;
+      const row = (label, value) => `<div class="flex justify-between gap-3 py-1 border-b border-slate-100"><span class="text-slate-500">${label}</span><span class="text-slate-800 font-medium text-right break-all">${value}</span></div>`;
+      document.getElementById('contactPanelDetails').innerHTML = [
+        row('Phone', escapeHtml(c.phone_number || '—')),
+        row('Email', escapeHtml(c.email || '—')),
+        row('Channels', escapeHtml((c.channels || []).map(ch => (CHANNEL_BADGES[ch] || [ch])[0]).join(', ') || '—')),
+        row('Last activity', c.last_activity_at ? relativeTime(c.last_activity_at) : '—'),
+      ].join('');
+      const stageSel = document.getElementById('contactPanelStage');
+      fillStageSelect(stageSel, false);
+      stageSel.value = c.lifecycle_stage;
+      document.getElementById('contactPanelBlockBtn').textContent = c.is_blocked ? 'Unblock' : 'Block';
+      document.getElementById('contactPanelInboxBtn').classList.toggle('hidden', !c.conversation_count);
+      renderContactPanelTags();
+      document.getElementById('contactPanel').classList.remove('hidden');
+      lucide.createIcons();
+      await Promise.all([loadContactNotes(), loadContactEvents()]);
+    }
+
+    function closeContactPanel() {
+      document.getElementById('contactPanel').classList.add('hidden');
+      currentContact = null;
+    }
+
+    function renderContactPanelTags() {
+      const attached = new Set((currentContact.tags || []).map(t => t.id));
+      const box = document.getElementById('contactPanelTags');
+      const chips = (currentContact.tags || []).map(t => tagChip(t, true)).join('');
+      const available = contactTags.filter(t => !attached.has(t.id))
+        .map(t => `<button onclick="toggleContactTag('${t.id}')" class="px-2 py-0.5 rounded-full border border-dashed border-slate-300 text-[10px] text-slate-500 hover:border-emerald-400 hover:text-emerald-700">+ ${escapeHtml(t.name)}</button>`).join('');
+      box.innerHTML = (chips || '<span class="text-slate-400">No tags</span>') + available;
+    }
+
+    async function updateCurrentContact(body) {
+      const json = await fetch(`/api/v1/contacts/${currentContact.id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${authToken}` },
+        body: JSON.stringify(body)
+      }).then(r => r.json());
+      if (!json.success) {
+        alert(json.error?.message || 'Update failed');
+        return false;
+      }
+      await openContactPanel(currentContact.id);
+      await loadContacts(contactsPage);
+      return true;
+    }
+
+    function changeContactStage(stage) {
+      if (currentContact && stage !== currentContact.lifecycle_stage) updateCurrentContact({ lifecycle_stage: stage });
+    }
+
+    function toggleContactBlocked() {
+      if (!currentContact) return;
+      const blocking = !currentContact.is_blocked;
+      if (blocking && !confirm("Block this contact? The AI bot will stop replying to them; their messages still appear in the inbox.")) return;
+      updateCurrentContact({ is_blocked: blocking });
+    }
+
+    async function setContactTags(tagIds) {
+      const json = await fetch(`/api/v1/contacts/${currentContact.id}/tags`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${authToken}` },
+        body: JSON.stringify({ tag_ids: tagIds })
+      }).then(r => r.json());
+      if (!json.success) return alert(json.error?.message || 'Could not update tags');
+      currentContact = json.data;
+      renderContactPanelTags();
+      loadContactEvents();
+      loadContacts(contactsPage);
+    }
+
+    function toggleContactTag(tagId) {
+      const ids = (currentContact.tags || []).map(t => t.id);
+      setContactTags(ids.includes(tagId) ? ids.filter(x => x !== tagId) : [...ids, tagId]);
+    }
+
+    async function createTagAndAttach() {
+      const input = document.getElementById('newTagName');
+      const name = input.value.trim();
+      if (!name || !currentContact) return;
+      let tag = contactTags.find(t => t.name.toLowerCase() === name.toLowerCase());
+      if (!tag) {
+        const json = await fetch('/api/v1/contacts/tags', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${authToken}` },
+          body: JSON.stringify({ name, color_hex: '#10B981' })
+        }).then(r => r.json());
+        if (!json.success) return alert(json.error?.message || 'Could not create tag');
+        tag = json.data;
+        await loadContactTags();
+      }
+      input.value = '';
+      const ids = (currentContact.tags || []).map(t => t.id);
+      if (!ids.includes(tag.id)) await setContactTags([...ids, tag.id]);
+    }
+
+    async function loadContactNotes() {
+      const box = document.getElementById('contactPanelNotes');
+      const json = await fetch(`/api/v1/contacts/${currentContact.id}/notes`, { headers: { 'Authorization': `Bearer ${authToken}` } }).then(r => r.json());
+      const notes = json.success ? json.data : [];
+      box.innerHTML = notes.map(n => `
+        <div class="p-2.5 rounded-lg bg-amber-50/60 border border-amber-200">
+          <p class="text-slate-800 whitespace-pre-line">${escapeHtml(n.note_text)}</p>
+          <div class="flex justify-between items-center mt-1 text-[10px] text-slate-500">
+            <span>${escapeHtml(n.author_name || 'Team member')} • ${relativeTime(n.created_at)}</span>
+            <button onclick="deleteContactNote('${n.id}')" class="hover:text-rose-600">Delete</button>
+          </div>
+        </div>
+      `).join('') || '<p class="text-slate-400 italic">No notes yet.</p>';
+    }
+
+    async function addContactNote() {
+      const input = document.getElementById('newNoteText');
+      const text = input.value.trim();
+      if (!text || !currentContact) return;
+      const json = await fetch(`/api/v1/contacts/${currentContact.id}/notes`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${authToken}` },
+        body: JSON.stringify({ note_text: text })
+      }).then(r => r.json());
+      if (!json.success) return alert(json.error?.message || 'Could not add note');
+      input.value = '';
+      await Promise.all([loadContactNotes(), loadContactEvents()]);
+    }
+
+    async function deleteContactNote(noteId) {
+      if (!confirm('Delete this note?')) return;
+      await fetch(`/api/v1/contacts/${currentContact.id}/notes/${noteId}`, { method: 'DELETE', headers: { 'Authorization': `Bearer ${authToken}` } });
+      loadContactNotes();
+    }
+
+    const EVENT_LABELS = {
+      created: 'Contact created',
+      stage_changed: 'Lifecycle stage changed',
+      tag_added: 'Tag added',
+      tag_removed: 'Tag removed',
+      note_added: 'Note added',
+      conversation_started: 'Conversation started',
+      conversation_resolved: 'Conversation resolved',
+      campaign_sent: 'Campaign sent',
+    };
+
+    async function loadContactEvents() {
+      const box = document.getElementById('contactPanelEvents');
+      const json = await fetch(`/api/v1/contacts/${currentContact.id}/events`, { headers: { 'Authorization': `Bearer ${authToken}` } }).then(r => r.json());
+      const tagName = id => (contactTags.find(t => t.id === id) || {}).name || 'tag';
+      box.innerHTML = (json.success ? json.data : []).map(e => {
+        let detail = '';
+        if (e.event_type === 'stage_changed') detail = `${(STAGE_INFO[e.event_data.from] || {}).label || e.event_data.from} → ${(STAGE_INFO[e.event_data.to] || {}).label || e.event_data.to}`;
+        else if (e.event_type.startsWith('tag_')) detail = tagName(e.event_data.tag_id);
+        else if (e.event_type === 'note_added') detail = e.event_data.preview || '';
+        else if (e.event_type === 'created' && e.event_data.source) detail = `via ${(CHANNEL_BADGES[e.event_data.source] || [e.event_data.source])[0]}`;
+        return `
+          <div class="flex gap-2">
+            <span class="w-1.5 h-1.5 rounded-full bg-emerald-500 mt-1.5 shrink-0"></span>
+            <div class="min-w-0">
+              <div class="text-slate-800 font-medium">${escapeHtml(EVENT_LABELS[e.event_type] || e.event_type)}${detail ? `: <span class="font-normal text-slate-600">${escapeHtml(detail)}</span>` : ''}</div>
+              <div class="text-[10px] text-slate-400">${relativeTime(e.created_at)}</div>
+            </div>
+          </div>`;
+      }).join('') || '<p class="text-slate-400 italic">No activity yet.</p>';
+    }
+
+    async function deleteCurrentContact() {
+      if (!currentContact) return;
+      if (!confirm(`Delete ${contactName(currentContact)}? Their conversation history stays in the inbox.`)) return;
+      const json = await fetch(`/api/v1/contacts/${currentContact.id}`, { method: 'DELETE', headers: { 'Authorization': `Bearer ${authToken}` } }).then(r => r.json());
+      if (!json.success) return alert(json.error?.message || 'Could not delete contact');
+      closeContactPanel();
+      loadContacts(contactsPage);
+    }
+
+    async function openContactInInbox() {
+      if (!currentContact) return;
+      const json = await fetch(`/api/v1/conversations/?contact_id=${currentContact.id}&page_size=1`, { headers: { 'Authorization': `Bearer ${authToken}` } }).then(r => r.json());
+      const conv = json.success && json.data.items[0];
+      if (!conv) return alert('This contact has no conversations yet.');
+      closeContactPanel();
+      switchTab('inbox');
+      await fetchLiveConversations(true);
+      if (!conversationsCache.some(c => c.id === conv.id)) conversationsCache.unshift(conv);
+      await selectConversation(conv.id);
     }
 
     let lastMessageSignature = '';
@@ -1973,6 +2419,8 @@
         loadIntegrationsData();
       } else if (tabId === 'agents') {
         loadInstructionBuilderData();
+      } else if (tabId === 'contacts') {
+        fetchLiveContacts();
       }
     }
 

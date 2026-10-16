@@ -9,15 +9,17 @@ from uuid import UUID
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.common.schemas import enum_value
 from app.common.schemas import PaginationMeta
 from app.constants import (
+    ContactEventType,
     ConversationStatus,
     MessageDeliveryStatus,
     MessageSenderType,
 )
 from app.domains.channels import inbound
 from app.domains.channels.models import Channel, ChannelAccount
-from app.domains.contacts.models import Contact
+from app.domains.contacts.models import Contact, ContactEvent
 from app.domains.conversations.models import Conversation, Message, SatisfactionRating, Team
 from app.domains.conversations.repository import ConversationRepository, MessageRepository
 from app.domains.conversations.schemas import (
@@ -71,12 +73,15 @@ class ConversationService:
         return out
 
     async def list_conversations(
-        self, org_id: UUID, page: int, page_size: int, status: Optional[str] = None
+        self, org_id: UUID, page: int, page_size: int, status: Optional[str] = None,
+        contact_id: Optional[UUID] = None,
     ) -> Tuple[Sequence[Conversation], PaginationMeta]:
         """Inbox order: most recent activity first."""
         conds = [Conversation.organization_id == org_id, Conversation.is_deleted.is_(False)]
         if status:
             conds.append(Conversation.status == status)
+        if contact_id:
+            conds.append(Conversation.contact_id == contact_id)
         total = (await self.session.execute(select(func.count()).select_from(Conversation).where(*conds))).scalar_one()
         items = (
             await self.session.execute(
@@ -110,7 +115,7 @@ class ConversationService:
             contact_id=data.contact_id,
             channel_account_id=data.channel_account_id,
             subject=data.subject,
-            priority=data.priority.value,
+            priority=enum_value(data.priority),
             status=ConversationStatus.OPEN.value,
             service_window_expires_at=None,
             last_message_at=datetime.now(timezone.utc),
@@ -233,6 +238,13 @@ class ConversationService:
         conv.status = ConversationStatus.RESOLVED.value
         conv.resolved_at = now
         conv.unread_count = 0
+
+        self.session.add(
+            ContactEvent(
+                organization_id=org_id, contact_id=conv.contact_id, event_type=ContactEventType.CONVERSATION_RESOLVED.value,
+                actor_type="agent", event_data={"conversation_id": str(conv.id)},
+            )
+        )
 
         # One CSAT invite per conversation
         existing = await self.session.execute(

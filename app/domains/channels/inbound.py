@@ -88,6 +88,21 @@ def load_credentials(encrypted: Optional[str]) -> dict:
         return {}
 
 
+async def log_contact_event(
+    session: AsyncSession, org_id: UUID, contact_id: UUID, event_type: str, data: Optional[dict] = None
+) -> None:
+    """Append a system event to the contact's CRM timeline."""
+    await session.execute(
+        text(
+            """
+            INSERT INTO contact_events (id, organization_id, contact_id, event_type, actor_type, event_data, created_at, updated_at)
+            VALUES (gen_random_uuid(), :org_id, :cid, :type, 'system', CAST(:data AS jsonb), CURRENT_TIMESTAMP, CURRENT_TIMESTAMP);
+            """
+        ),
+        {"org_id": org_id, "cid": contact_id, "type": event_type, "data": json.dumps(data or {})},
+    )
+
+
 async def upsert_conversation(
     session: AsyncSession, org_id: UUID, contact_id: UUID, channel_account_id: UUID, subject: str
 ) -> UUID:
@@ -133,7 +148,9 @@ async def upsert_conversation(
         ),
         {"org_id": org_id, "cid": contact_id, "chid": channel_account_id, "subject": subject[:255]},
     )
-    return res.scalar_one()
+    conversation_id = res.scalar_one()
+    await log_contact_event(session, org_id, contact_id, "conversation_started", {"conversation_id": str(conversation_id)})
+    return conversation_id
 
 
 async def save_message(
@@ -160,9 +177,8 @@ async def save_message(
 
 
 async def bot_should_reply(session: AsyncSession, conversation_id: UUID) -> bool:
-    """False once a human agent has replied since the conversation was last resolved.
-
-    Resolving the conversation hands it back to the bot.
+    """False for blocked contacts, and once a human agent has replied since the conversation
+    was last resolved. Resolving the conversation hands it back to the bot.
     """
     res = await session.execute(
         text(
@@ -171,6 +187,9 @@ async def bot_should_reply(session: AsyncSession, conversation_id: UUID) -> bool
                 SELECT 1 FROM messages m JOIN conversations c ON c.id = m.conversation_id
                 WHERE m.conversation_id = :conv_id AND m.sender_type = 'agent'
                   AND m.created_at > COALESCE(c.resolved_at, '-infinity'::timestamptz)
+            ) AND NOT EXISTS (
+                SELECT 1 FROM conversations c JOIN contacts ct ON ct.id = c.contact_id
+                WHERE c.id = :conv_id AND ct.is_blocked
             );
             """
         ),
