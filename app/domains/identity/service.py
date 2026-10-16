@@ -6,6 +6,8 @@ from datetime import datetime, timedelta, timezone
 from typing import Optional, Tuple
 from uuid import UUID
 
+from sqlalchemy import select, update
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.config import settings
@@ -25,16 +27,29 @@ from app.domains.identity.repository import (
     SessionRepository,
     UserRepository,
 )
+from app.domains.identity import rate_limit
 from app.domains.identity.schemas import TokenResponse, UserLogin, UserRegister
 from app.domains.usage.models import CreditBalance
 from app.exceptions import AuthenticationError, ResourceConflictError, ResourceNotFoundError
 from app.security import (
+    burn_password_check,
     create_access_token,
     create_refresh_token,
     decode_token,
     get_password_hash,
     verify_password,
 )
+
+
+def permissions_for_role(role: Optional[str]) -> list[str]:
+    """Permission set granted to a membership role."""
+    if role == MembershipRole.OWNER.value:
+        return ["*"]
+    return ["conversations:read", "messages:write"]
+
+
+def _hash_refresh_token(raw_token: str) -> str:
+    return hashlib.sha256(raw_token.encode("utf-8")).hexdigest()
 
 
 class IdentityService:
@@ -50,19 +65,25 @@ class IdentityService:
         self, data: UserRegister, ip_address: Optional[str] = None, user_agent: Optional[str] = None
     ) -> Tuple[User, Organization, TokenResponse]:
         """Registers a new account, provisions an organization workspace, and assigns Owner role."""
+        await rate_limit.ensure_registration_allowed(ip_address)
+
         # Check if email is already taken
         existing_user = await self.user_repo.get_by_email(data.email)
         if existing_user:
             raise ResourceConflictError("A user with this email address already exists")
 
-        # Create User
+        # Create User (the unique constraint catches a concurrent registration of the same email)
         password_hash = get_password_hash(data.password)
-        user = await self.user_repo.create(
-            email=data.email.lower(),
-            password_hash=password_hash,
-            full_name=data.full_name,
-            status=UserStatus.ACTIVE.value,
-        )
+        try:
+            async with self.session.begin_nested():
+                user = await self.user_repo.create(
+                    email=data.email.lower(),
+                    password_hash=password_hash,
+                    full_name=data.full_name,
+                    status=UserStatus.ACTIVE.value,
+                )
+        except IntegrityError:
+            raise ResourceConflictError("A user with this email address already exists")
 
         # Generate unique slug for organization
         base_slug = data.organization_name.lower().replace(" ", "-")[:40]
@@ -116,24 +137,16 @@ class IdentityService:
             expires_at=session_expiry,
         )
 
-        raw_refresh_token, refresh_expiry = create_refresh_token(user.id, session_obj.id)
-        token_hash = hashlib.sha256(raw_refresh_token.encode("utf-8")).hexdigest()
-
-        refresh_token_record = RefreshToken(
-            session_id=session_obj.id,
-            token_hash=token_hash,
-            expires_at=refresh_expiry,
-        )
-        self.session.add(refresh_token_record)
-        await self.session.flush()
+        raw_refresh_token = await self._issue_refresh_token(user.id, session_obj.id)
 
         # Create Access Token
         access_token = create_access_token(
             user_id=user.id,
             email=user.email,
+            session_id=session_obj.id,
             organization_id=org.id,
             role=MembershipRole.OWNER.value,
-            permissions=["*"],
+            permissions=permissions_for_role(MembershipRole.OWNER.value),
         )
 
         token_response = TokenResponse(
@@ -154,9 +167,15 @@ class IdentityService:
         user_agent: Optional[str] = None,
     ) -> TokenResponse:
         """Authenticates user credentials and returns tokens for the active organization."""
+        await rate_limit.ensure_login_allowed(credentials.email, ip_address)
+
         user = await self.user_repo.get_by_email(credentials.email)
+        if not user:
+            burn_password_check(credentials.password)
         if not user or not verify_password(credentials.password, user.password_hash):
+            await rate_limit.record_login_failure(credentials.email, ip_address)
             raise AuthenticationError("Invalid email or password")
+        await rate_limit.clear_login_failures(credentials.email)
 
         if user.status != UserStatus.ACTIVE.value:
             raise AuthenticationError(f"Account is {user.status}")
@@ -193,28 +212,105 @@ class IdentityService:
             expires_at=session_expiry,
         )
 
-        raw_refresh_token, refresh_expiry = create_refresh_token(user.id, session_obj.id)
-        token_hash = hashlib.sha256(raw_refresh_token.encode("utf-8")).hexdigest()
-
-        refresh_token_record = RefreshToken(
-            session_id=session_obj.id,
-            token_hash=token_hash,
-            expires_at=refresh_expiry,
-        )
-        self.session.add(refresh_token_record)
-        await self.session.flush()
+        raw_refresh_token = await self._issue_refresh_token(user.id, session_obj.id)
 
         access_token = create_access_token(
             user_id=user.id,
             email=user.email,
+            session_id=session_obj.id,
             organization_id=org_id,
             role=role_slug,
-            permissions=["*"] if role_slug == MembershipRole.OWNER.value else ["conversations:read", "messages:write"],
+            permissions=permissions_for_role(role_slug),
         )
 
         return TokenResponse(
             access_token=access_token,
             refresh_token=raw_refresh_token,
+            expires_in_seconds=settings.ACCESS_TOKEN_EXPIRE_MINUTES * 60,
+            user_id=user.id,
+            organization_id=org_id,
+            role=role_slug,
+        )
+
+    async def _issue_refresh_token(self, user_id: UUID, session_id: UUID) -> str:
+        """Create a refresh token for the session and store only its hash."""
+        raw_refresh_token, refresh_expiry = create_refresh_token(user_id, session_id)
+        self.session.add(
+            RefreshToken(
+                session_id=session_id,
+                token_hash=_hash_refresh_token(raw_refresh_token),
+                expires_at=refresh_expiry,
+            )
+        )
+        await self.session.flush()
+        return raw_refresh_token
+
+    async def _revoke_session(self, session_id: UUID) -> None:
+        await self.session.execute(
+            update(Session).where(Session.id == session_id).values(is_revoked=True)
+        )
+        await self.session.execute(
+            update(RefreshToken).where(RefreshToken.session_id == session_id).values(is_revoked=True)
+        )
+        await self.session.flush()
+
+    async def refresh_tokens(self, raw_refresh_token: str) -> TokenResponse:
+        """Rotate a refresh token: revoke the presented one and issue a new access/refresh pair.
+
+        Presenting an already-rotated token means it was stolen or replayed, so the whole
+        session is revoked.
+        """
+        payload = decode_token(raw_refresh_token, expected_type="refresh")
+        now = datetime.now(timezone.utc)
+
+        record = (
+            await self.session.execute(
+                select(RefreshToken).where(RefreshToken.token_hash == _hash_refresh_token(raw_refresh_token))
+            )
+        ).scalars().first()
+        if not record or str(record.session_id) != payload.get("session_id"):
+            raise AuthenticationError("Invalid refresh token")
+        if record.is_revoked:
+            await self._revoke_session(record.session_id)
+            # Commit the revocation even though this request fails
+            await self.session.commit()
+            raise AuthenticationError("Refresh token has already been used; session revoked")
+        if record.expires_at <= now:
+            raise AuthenticationError("Refresh token has expired")
+
+        session_obj = await self.session_repo.get_active_session(record.session_id)
+        if not session_obj or session_obj.expires_at <= now:
+            raise AuthenticationError("Session has been revoked or expired")
+
+        user = await self.user_repo.get_by_id(session_obj.user_id)
+        if not user or user.is_deleted or user.status != UserStatus.ACTIVE.value:
+            raise AuthenticationError("Account is not active")
+
+        org_id = session_obj.organization_id
+        role_slug = None
+        if org_id:
+            membership = await self.membership_repo.get_by_org_and_user(org_id, user.id)
+            if not membership:
+                await self._revoke_session(session_obj.id)
+                await self.session.commit()
+                raise AuthenticationError("User is no longer a member of this organization")
+            role_slug = membership.role
+
+        record.is_revoked = True
+        session_obj.last_active_at = now
+        new_refresh_token = await self._issue_refresh_token(user.id, session_obj.id)
+
+        access_token = create_access_token(
+            user_id=user.id,
+            email=user.email,
+            session_id=session_obj.id,
+            organization_id=org_id,
+            role=role_slug,
+            permissions=permissions_for_role(role_slug),
+        )
+        return TokenResponse(
+            access_token=access_token,
+            refresh_token=new_refresh_token,
             expires_in_seconds=settings.ACCESS_TOKEN_EXPIRE_MINUTES * 60,
             user_id=user.id,
             organization_id=org_id,
@@ -232,6 +328,11 @@ class IdentityService:
         await self.session.flush()
 
     async def terminate_session(self, user_id: UUID) -> None:
-        """Revokes all active sessions for the user upon logout."""
+        """Revokes all active sessions (and their refresh tokens) for the user upon logout."""
         await self.session_repo.revoke_user_sessions(user_id)
+        await self.session.execute(
+            update(RefreshToken)
+            .where(RefreshToken.session_id.in_(select(Session.id).where(Session.user_id == user_id)))
+            .values(is_revoked=True)
+        )
         await self.session.flush()

@@ -4,7 +4,7 @@ from datetime import datetime
 from typing import List, Optional
 from uuid import UUID
 
-from pydantic import EmailStr, Field
+from pydantic import EmailStr, Field, field_validator
 
 from app.common.schemas import BaseSchema
 from app.constants import AgentOnlineStatus, MembershipRole, OrganizationStatus, UserStatus
@@ -16,14 +16,23 @@ from app.constants import AgentOnlineStatus, MembershipRole, OrganizationStatus,
 
 class UserRegister(BaseSchema):
     email: EmailStr = Field(..., description="Corporate email address")
-    password: str = Field(..., min_length=8, description="Strong password minimum 8 chars")
+    password: str = Field(..., min_length=10, max_length=128, description="10-128 chars with letters and digits")
     full_name: str = Field(..., min_length=2, max_length=255, description="Full legal name")
     organization_name: str = Field(..., min_length=2, max_length=255, description="Initial workspace name")
+
+    @field_validator("password")
+    @classmethod
+    def _password_strength(cls, v: str) -> str:
+        if not any(c.isalpha() for c in v) or not any(c.isdigit() for c in v):
+            raise ValueError("Password must contain both letters and digits")
+        if len(set(v)) < 5:
+            raise ValueError("Password is too repetitive")
+        return v
 
 
 class UserLogin(BaseSchema):
     email: EmailStr
-    password: str
+    password: str = Field(..., max_length=128)
     organization_id: Optional[UUID] = None
 
 

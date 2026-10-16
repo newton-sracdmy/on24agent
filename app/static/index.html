@@ -1290,7 +1290,9 @@
               id="registerPassword" 
               type="password" 
               required
-              minlength="8"
+              minlength="10"
+              maxlength="128"
+              title="10-128 characters, including letters and digits"
               placeholder="••••••••" 
               class="w-full bg-slate-50 border border-slate-200 rounded-xl pl-10 pr-4 py-2.5 text-xs text-slate-900 placeholder-slate-400 focus:outline-none focus:bg-white focus:border-emerald-500 transition font-mono"
             />
@@ -1495,6 +1497,10 @@
     // Global Auth & Multi-Tenant State
     // ------------------------------------------------------------------------
     let currentUser = null;
+    function escapeHtml(value) {
+      return String(value ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+    }
+
     let authToken = localStorage.getItem('gabster_auth_token') || null;
     let currentOrgId = localStorage.getItem('gabster_current_org') || "00000000-0000-0000-0000-000000000200";
     let activeConvId = null;
@@ -1624,7 +1630,7 @@
           localStorage.setItem('gabster_current_org', currentOrgId);
 
           statusDiv.className = 'text-xs p-3 rounded-xl bg-emerald-950/80 border border-emerald-500/40 text-emerald-300 block';
-          statusDiv.innerHTML = `🎉 Welcome, ${fullName}! Workspace provisioned with 10,000 free starter credits.`;
+          statusDiv.innerHTML = `🎉 Welcome, ${escapeHtml(fullName)}! Workspace provisioned with 10,000 free starter credits.`;
 
           setTimeout(async () => {
             hideAuthModal();
@@ -1632,7 +1638,8 @@
           }, 800);
         } else {
           statusDiv.className = 'text-xs p-3 rounded-xl bg-rose-950/80 border border-rose-500/40 text-rose-300 block';
-          statusDiv.textContent = data.error?.message || data.detail || 'Registration failed. Check inputs.';
+          const validationMsg = Array.isArray(data.detail) ? data.detail.map(d => d.msg).join('; ') : data.detail;
+          statusDiv.textContent = data.error?.message || validationMsg || 'Registration failed. Check inputs.';
         }
       } catch (err) {
         statusDiv.className = 'text-xs p-3 rounded-xl bg-rose-950/80 border border-rose-500/40 text-rose-300 block';
@@ -1694,7 +1701,7 @@
           const nameEl = document.getElementById('userNameDisplay');
           if (nameEl) nameEl.textContent = currentUser.full_name || 'Staff User';
           const emailEl = document.getElementById('userEmailDisplay');
-          if (emailEl) emailEl.innerHTML = `● ${currentUser.role || 'Member'}`;
+          if (emailEl) emailEl.innerHTML = `● ${escapeHtml(currentUser.role || 'Member')}`;
 
           // Populate workspace dropdown
           if (currentUser.organizations && currentUser.organizations.length > 0) {
@@ -1702,7 +1709,7 @@
             if (wsSelect) {
               wsSelect.innerHTML = currentUser.organizations.map(org => {
                 const isSelected = (org.id === currentOrgId) ? 'selected' : '';
-                return `<option value="${org.id}" class="bg-white text-slate-800" ${isSelected}>${org.name}</option>`;
+                return `<option value="${escapeHtml(org.id)}" class="bg-white text-slate-800" ${isSelected}>${escapeHtml(org.name)}</option>`;
               }).join('');
               if (!currentUser.organizations.some(o => o.id === currentOrgId)) {
                 currentOrgId = currentUser.organizations[0].id;

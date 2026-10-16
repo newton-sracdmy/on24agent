@@ -12,6 +12,7 @@ services:
       - ../.env
     environment:
       - ENVIRONMENT=production
+      - DEBUG=false
       - SERVER_HOST=0.0.0.0
       - SERVER_PORT=8000
       - POSTGRES_SERVER=localhost
@@ -45,6 +46,7 @@ services:
       - ../.env
     environment:
       - ENVIRONMENT=production
+      - DEBUG=false
       - POSTGRES_SERVER=localhost
       - POSTGRES_PORT=5433
       - POSTGRES_USER=postgres

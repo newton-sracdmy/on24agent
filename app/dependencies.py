@@ -1,16 +1,19 @@
 """FastAPI dependencies for authentication, multi-tenant resolution, and RBAC authorization.
 """
 
+from datetime import datetime, timezone
 from typing import Annotated, AsyncGenerator, Callable, List, Optional
 from uuid import UUID
 
 from fastapi import Depends, Header, HTTPException, Security, status
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
-from sqlalchemy import select
+from sqlalchemy import select, text
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.constants import MembershipRole, UserStatus
 from app.database import get_admin_db_session, get_db_session, set_current_tenant_id
+from app.domains.identity.models import Membership, Session, User
+from app.domains.identity.service import permissions_for_role
 from app.exceptions import AuthenticationError, PermissionDeniedError
 from app.security import decode_token
 
@@ -55,44 +58,90 @@ class AuthenticatedUserContext:
 
 async def get_current_user(
     auth_header: Annotated[Optional[HTTPAuthorizationCredentials], Security(security_scheme)],
+    db: Annotated[AsyncSession, Depends(get_db)],
     x_org_header: Annotated[Optional[str], Header(alias="X-Organization-ID")] = None,
 ) -> AuthenticatedUserContext:
-    """Validates JWT bearer token and sets organization context."""
+    """Validates the bearer token against the live session and resolves organization context.
+
+    The token only identifies the caller. Session validity, account status, organization
+    membership and role are all read from the database on every request, so logout,
+    suspension and membership removal take effect immediately, and X-Organization-ID can
+    only select an organization the caller actually belongs to.
+    """
     if not auth_header or not auth_header.credentials:
         raise AuthenticationError(message="Bearer token is required")
 
-    payload = decode_token(auth_header.credentials)
-    user_id_str = payload.get("sub")
-    email = payload.get("email")
-
-    if not user_id_str or not email:
+    payload = decode_token(auth_header.credentials, expected_type="access")
+    try:
+        user_id = UUID(payload["sub"])
+        session_id = UUID(payload["sid"])
+    except (KeyError, TypeError, ValueError):
         raise AuthenticationError(message="Token missing required claims")
 
-    user_id = UUID(user_id_str)
+    now = datetime.now(timezone.utc)
+    session_obj = (
+        await db.execute(
+            select(Session).where(
+                Session.id == session_id,
+                Session.user_id == user_id,
+                Session.is_revoked == False,  # noqa: E712
+                Session.expires_at > now,
+            )
+        )
+    ).scalars().first()
+    if not session_obj:
+        raise AuthenticationError(message="Session has been revoked or expired")
 
-    # Determine organization context (prefer header override if present)
+    user = (
+        await db.execute(
+            select(User).where(
+                User.id == user_id,
+                User.is_deleted == False,  # noqa: E712
+                User.status == UserStatus.ACTIVE.value,
+            )
+        )
+    ).scalars().first()
+    if not user:
+        raise AuthenticationError(message="Account is not active")
+
+    # Organization requested by header, else the one the session was opened for
     org_id: Optional[UUID] = None
     if x_org_header:
         try:
             org_id = UUID(x_org_header)
         except ValueError:
-            pass
-    elif payload.get("org_id"):
-        try:
-            org_id = UUID(payload["org_id"])
-        except ValueError:
-            pass
+            raise PermissionDeniedError(message="X-Organization-ID is not a valid UUID")
+    elif session_obj.organization_id:
+        org_id = session_obj.organization_id
 
-    # Populate thread/task context variable for RLS
+    role: Optional[str] = None
     if org_id:
+        # Scope the transaction to the org before reading memberships (RLS-protected table);
+        # the endpoint reuses this same session, so its queries stay scoped to the verified org.
+        await db.execute(
+            text("SELECT set_config('app.current_org_id', :org_id, true)"),
+            {"org_id": str(org_id)},
+        )
+        membership = (
+            await db.execute(
+                select(Membership).where(
+                    Membership.organization_id == org_id,
+                    Membership.user_id == user_id,
+                    Membership.is_active == True,  # noqa: E712
+                )
+            )
+        ).scalars().first()
+        if not membership:
+            raise PermissionDeniedError(message="You are not a member of the requested organization")
+        role = membership.role
         set_current_tenant_id(org_id)
 
     return AuthenticatedUserContext(
         user_id=user_id,
-        email=email,
+        email=user.email,
         organization_id=org_id,
-        role=payload.get("role"),
-        permissions=payload.get("perms", []),
+        role=role,
+        permissions=permissions_for_role(role) if role else [],
     )
 
 

@@ -15,22 +15,26 @@ from typing import Any, Dict, Optional, Tuple
 from uuid import UUID
 
 import bcrypt
-from cryptography.fernet import Fernet
+from cryptography.fernet import Fernet, MultiFernet
 from jose import JWTError, jwt
 
 from app.config import settings
 from app.exceptions import AuthenticationError
 
 # Symmetric encryption cipher for sensitive keys at rest
-_cipher: Optional[Fernet] = None
+_cipher: Optional[MultiFernet] = None
 
 
-def get_cipher() -> Fernet:
-    """Retrieve or initialize the Fernet cipher for symmetric encryption."""
+def get_cipher() -> MultiFernet:
+    """Retrieve or initialize the cipher for symmetric encryption.
+
+    Encrypts with ENCRYPTION_KEY; also decrypts with any ENCRYPTION_KEY_PREVIOUS
+    keys so stored secrets stay readable during key rotation.
+    """
     global _cipher
     if _cipher is None:
-        key = settings.ENCRYPTION_KEY.encode()
-        _cipher = Fernet(key)
+        keys = [settings.ENCRYPTION_KEY, *settings.ENCRYPTION_KEY_PREVIOUS]
+        _cipher = MultiFernet([Fernet(k.encode()) for k in keys])
     return _cipher
 
 
@@ -53,6 +57,18 @@ def get_password_hash(password: str) -> str:
     pwd_bytes = password[:72].encode("utf-8")
     salt = bcrypt.gensalt(rounds=settings.BCRYPT_ROUNDS)
     return bcrypt.hashpw(pwd_bytes, salt).decode("utf-8")
+
+
+_dummy_password_hash: Optional[str] = None
+
+
+def burn_password_check(plain_password: str) -> None:
+    """Spend the same bcrypt time as a real check, so login latency doesn't reveal
+    whether an email is registered."""
+    global _dummy_password_hash
+    if _dummy_password_hash is None:
+        _dummy_password_hash = get_password_hash(secrets.token_urlsafe(16))
+    verify_password(plain_password, _dummy_password_hash)
 
 
 # ==============================================================================
@@ -82,6 +98,7 @@ def decrypt_secret(cipher_text: str) -> str:
 def create_access_token(
     user_id: UUID,
     email: str,
+    session_id: UUID,
     organization_id: Optional[UUID] = None,
     role: Optional[str] = None,
     permissions: Optional[list[str]] = None,
@@ -97,6 +114,7 @@ def create_access_token(
     to_encode: Dict[str, Any] = {
         "sub": str(user_id),
         "email": email,
+        "sid": str(session_id),
         "type": "access",
         "iat": int(now.timestamp()),
         "exp": int(expire.timestamp()),
@@ -122,6 +140,7 @@ def create_refresh_token(user_id: UUID, session_id: UUID) -> Tuple[str, datetime
     payload = {
         "sub": str(user_id),
         "session_id": str(session_id),
+        "jti": secrets.token_hex(16),
         "type": "refresh",
         "iat": int(now.timestamp()),
         "exp": int(expire.timestamp()),
@@ -132,18 +151,17 @@ def create_refresh_token(user_id: UUID, session_id: UUID) -> Tuple[str, datetime
     return encoded_token, expire
 
 
-def decode_token(token: str) -> Dict[str, Any]:
+def decode_token(token: str, expected_type: str = "access") -> Dict[str, Any]:
     """Verify and decode a JWT token string. Raises AuthenticationError on failure."""
     try:
         payload = jwt.decode(
             token, settings.SECRET_KEY, algorithms=[settings.JWT_ALGORITHM]
         )
-        return payload
-    except JWTError as e:
-        raise AuthenticationError(
-            message="Token signature is invalid or expired",
-            details={"error": str(e)},
-        )
+    except JWTError:
+        raise AuthenticationError(message="Token signature is invalid or expired")
+    if payload.get("type") != expected_type:
+        raise AuthenticationError(message="Token signature is invalid or expired")
+    return payload
 
 
 # ==============================================================================

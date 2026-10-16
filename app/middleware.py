@@ -6,13 +6,13 @@ Ensures every incoming HTTP request receives a unique X-Request-ID and tracks la
 import time
 import uuid
 from typing import Callable
-from uuid import UUID
 
 from fastapi import Request, Response
 from fastapi.responses import JSONResponse
 from starlette.middleware.base import BaseHTTPMiddleware
 
 from app.common.schemas import APIResponse
+from app.config import settings
 from app.database import set_current_tenant_id
 from app.exceptions import GabsterException
 
@@ -40,22 +40,14 @@ class RequestCorrelationMiddleware(BaseHTTPMiddleware):
 
 
 class TenantContextMiddleware(BaseHTTPMiddleware):
-    """Extracts tenant organization ID from header or request state and populates contextvar."""
+    """Starts every request with no tenant context.
+
+    The X-Organization-ID header is untrusted input; the tenant is only set by
+    get_current_user after it has verified the caller's membership in that organization.
+    """
 
     async def dispatch(self, request: Request, call_next: Callable) -> Response:
-        org_id_str = request.headers.get("X-Organization-ID")
-        if org_id_str:
-            try:
-                org_uuid = UUID(org_id_str)
-                set_current_tenant_id(org_uuid)
-                request.state.organization_id = org_uuid
-            except ValueError:
-                set_current_tenant_id(None)
-                request.state.organization_id = None
-        else:
-            set_current_tenant_id(None)
-            request.state.organization_id = None
-
+        set_current_tenant_id(None)
         try:
             return await call_next(request)
         finally:
@@ -85,7 +77,7 @@ class GlobalExceptionMiddleware(BaseHTTPMiddleware):
             payload = APIResponse.fail(
                 code="INTERNAL_SERVER_ERROR",
                 message="An unexpected internal server error occurred",
-                details={"error": str(exc)},
+                details={"error": str(exc)} if settings.DEBUG else None,
                 request_id=request_id,
             ).model_dump(by_alias=True)
             return JSONResponse(status_code=500, content=payload)

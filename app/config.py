@@ -4,8 +4,14 @@ Loads environment variables with validation, type coercion, and defaults.
 """
 
 from typing import List, Literal, Optional
-from pydantic import Field, PostgresDsn, RedisDsn, field_validator
+from pydantic import Field, PostgresDsn, RedisDsn, field_validator, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
+
+
+# Development-only fallbacks. These values are public (they live in the repo), so
+# non-development environments refuse to start with them (see _enforce_secure_secrets).
+_DEV_SECRET_KEY = "09d25e094faa6ca2556c818166b7a9563b93f7099f6f0f4caa6cf63b88e8d3e7"
+_DEV_ENCRYPTION_KEY = "cE1xQzZWM1drR3VwOHdZZjBXZk9lcmx0aWlCdmJ0bVE="
 
 
 class Settings(BaseSettings):
@@ -21,7 +27,7 @@ class Settings(BaseSettings):
     APP_NAME: str = "gabster-ai"
     DEBUG: bool = False
     SECRET_KEY: str = Field(
-        default="09d25e094faa6ca2556c818166b7a9563b93f7099f6f0f4caa6cf63b88e8d3e7",
+        default=_DEV_SECRET_KEY,
         min_length=32,
     )
     API_V1_STR: str = "/api/v1"
@@ -136,10 +142,19 @@ class Settings(BaseSettings):
     SESSION_IDLE_TIMEOUT_MINUTES: int = 120
     JWT_ALGORITHM: str = "HS256"
     ENCRYPTION_KEY: str = Field(
-        default="cE1xQzZWM1drR3VwOHdZZjBXZk9lcmx0aWlCdmJ0bVE=",  # 32-byte url-safe base64 default for dev
+        default=_DEV_ENCRYPTION_KEY,  # 32-byte url-safe base64 default for dev
         description="Fernet symmetric key for encrypting API tokens and credentials at rest",
     )
+    ENCRYPTION_KEY_PREVIOUS: List[str] = Field(
+        default_factory=list,
+        description="Retired Fernet keys still accepted for decryption during key rotation",
+    )
     BCRYPT_ROUNDS: int = 12
+
+    # Auth Rate Limiting (Redis fixed-window counters)
+    LOGIN_MAX_FAILED_ATTEMPTS: int = 10
+    LOGIN_LOCKOUT_WINDOW_SECONDS: int = 900
+    REGISTER_MAX_PER_IP_PER_HOUR: int = 10
 
     # Media & File Storage
     STORAGE_BACKEND: Literal["local", "s3"] = "local"
@@ -172,6 +187,22 @@ class Settings(BaseSettings):
     METRICS_PORT: int = 9090
     OTEL_EXPORTER_OTLP_ENDPOINT: Optional[str] = None
     OTEL_SERVICE_NAME: str = "gabster-ai-backend"
+
+    @model_validator(mode="after")
+    def _enforce_secure_secrets(self) -> "Settings":
+        if self.ENVIRONMENT in ("development", "test"):
+            return self
+        problems = []
+        if self.SECRET_KEY == _DEV_SECRET_KEY or "change-this" in self.SECRET_KEY:
+            problems.append("SECRET_KEY is a public default/placeholder")
+        if self.ENCRYPTION_KEY == _DEV_ENCRYPTION_KEY:
+            problems.append("ENCRYPTION_KEY is the public development default")
+        if problems:
+            raise ValueError(
+                f"Refusing to start in {self.ENVIRONMENT}: " + "; ".join(problems)
+                + ". Generate new values (see .env.example)."
+            )
+        return self
 
 
 settings = Settings()

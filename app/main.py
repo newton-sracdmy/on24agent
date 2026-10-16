@@ -76,7 +76,8 @@ def create_application() -> FastAPI:
     app.add_middleware(
         CORSMiddleware,
         allow_origins=settings.CORS_ORIGINS,
-        allow_credentials=True,
+        # Auth uses bearer headers, not cookies; never allow credentials with a wildcard origin
+        allow_credentials="*" not in settings.CORS_ORIGINS,
         allow_methods=["*"],
         allow_headers=["*"],
         expose_headers=["X-Request-ID", "X-Response-Time-MS"],

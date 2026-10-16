@@ -16,6 +16,7 @@ from app.dependencies import (
 )
 from app.domains.identity.schemas import (
     MembershipResponse,
+    RefreshTokenRequest,
     TokenResponse,
     UserLogin,
     UserRegister,
@@ -55,6 +56,17 @@ async def login(
     token_response = await service.authenticate_user(
         payload, ip_address=ip, user_agent=agent
     )
+    return APIResponse.ok(data=token_response)
+
+
+@router.post("/refresh", response_model=APIResponse[TokenResponse])
+async def refresh(
+    payload: RefreshTokenRequest,
+    db: AsyncSession = Depends(get_db),
+) -> APIResponse[TokenResponse]:
+    """Exchange a refresh token for a new access/refresh token pair (single use)."""
+    service = IdentityService(db)
+    token_response = await service.refresh_tokens(payload.refresh_token)
     return APIResponse.ok(data=token_response)
 
 
